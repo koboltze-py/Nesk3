@@ -8,13 +8,12 @@ import json
 from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import BACKUP_DIR, BACKUP_MAX_KEEP
+from config import BACKUP_DIR, BACKUP_MAX_KEEP, BASE_DIR
 
 
 def _ensure_backup_dir() -> str:
     """Erstellt das Backup-Verzeichnis falls nicht vorhanden."""
-    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    path = os.path.join(base, BACKUP_DIR)
+    path = os.path.join(BASE_DIR, BACKUP_DIR)
     os.makedirs(path, exist_ok=True)
     return path
 

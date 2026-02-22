@@ -30,11 +30,12 @@ class DienstplanParser:
     # Vollständig ausgeschlossene Personen (Vorname Nachname, lowercase, fix)
     AUSGESCHLOSSENE_VOLLNAMEN: frozenset = frozenset({'lars peters'})
 
-    def __init__(self, excel_path: str):
-        self.excel_path = Path(excel_path)
-        self.workbook   = None
-        self.sheet      = None
-        self.column_map = None
+    def __init__(self, excel_path: str, alle_anzeigen: bool = False):
+        self.excel_path    = Path(excel_path)
+        self.alle_anzeigen = alle_anzeigen  # True = keine Ausschlüsse, für Anzeige
+        self.workbook      = None
+        self.sheet         = None
+        self.column_map    = None
         self.unbekannte_dienste: set = set()
 
     # ------------------------------------------------------------------
@@ -84,22 +85,23 @@ class DienstplanParser:
                     else:
                         betreuer_liste.append(person)
 
-            # Ausgeschlossene Personen herausfiltern
-            try:
-                from functions.settings_functions import get_ausgeschlossene_namen
-                settings_ausgeschlossen = set(get_ausgeschlossene_namen())
-            except Exception:
-                settings_ausgeschlossen = set()
+            # Ausgeschlossene Personen herausfiltern (nur im Export-Modus)
+            if not self.alle_anzeigen:
+                try:
+                    from functions.settings_functions import get_ausgeschlossene_namen
+                    settings_ausgeschlossen = set(get_ausgeschlossene_namen())
+                except Exception:
+                    settings_ausgeschlossen = set()
 
-            alle_ausgeschlossen = self.AUSGESCHLOSSENE_VOLLNAMEN | settings_ausgeschlossen
+                alle_ausgeschlossen = self.AUSGESCHLOSSENE_VOLLNAMEN | settings_ausgeschlossen
 
-            def _filter_ausgeschlossen(lst):
-                return [p for p in lst
-                        if p['vollname'].lower() not in alle_ausgeschlossen]
+                def _filter_ausgeschlossen(lst):
+                    return [p for p in lst
+                            if p['vollname'].lower() not in alle_ausgeschlossen]
 
-            betreuer_liste = _filter_ausgeschlossen(betreuer_liste)
-            dispo_liste    = _filter_ausgeschlossen(dispo_liste)
-            kranke_liste   = _filter_ausgeschlossen(kranke_liste)
+                betreuer_liste = _filter_ausgeschlossen(betreuer_liste)
+                dispo_liste    = _filter_ausgeschlossen(dispo_liste)
+                kranke_liste   = _filter_ausgeschlossen(kranke_liste)
 
             # Doppelte Nachnamen → Initial anhängen
             nachname_counts  = Counter(alle_nachnamen)
@@ -113,7 +115,10 @@ class DienstplanParser:
                 'dispo':    dispo_liste,
                 'kranke':   kranke_liste,
                 'error':    None,
-                'unbekannte_dienste': list(self.unbekannte_dienste)
+                'unbekannte_dienste': list(self.unbekannte_dienste),
+                'datum':    self._find_datum(),
+                'column_map': dict(self.column_map) if self.column_map else {},
+                'excel_path': str(self.excel_path),
             }
 
         except Exception as e:
@@ -132,6 +137,31 @@ class DienstplanParser:
     # ------------------------------------------------------------------
     # Interne Hilfsmethoden
     # ------------------------------------------------------------------
+
+    def _find_datum(self) -> Optional[str]:
+        """Sucht in den ersten Zeilen nach einem Datumswert und gibt ihn als DD.MM.YYYY zurück."""
+        try:
+            header_row = (self.column_map or {}).get('header_row', 20)
+            for row_idx in range(1, header_row):
+                for cell in self.sheet[row_idx]:
+                    val = cell.value
+                    if isinstance(val, datetime):
+                        return val.strftime('%d.%m.%Y')
+                    if isinstance(val, str):
+                        # DD.MM.YYYY oder YYYY-MM-DD Muster
+                        m = re.search(r'(\d{1,2}\.\d{1,2}\.\d{2,4})', val)
+                        if m:
+                            return m.group(1)
+                        m = re.search(r'(\d{4}-\d{2}-\d{2})', val)
+                        if m:
+                            try:
+                                d = datetime.strptime(m.group(1), '%Y-%m-%d')
+                                return d.strftime('%d.%m.%Y')
+                            except ValueError:
+                                pass
+        except Exception:
+            pass
+        return None
 
     def _find_columns(self) -> Optional[dict]:
         """Sucht Header-Zeile und gibt Spalten-Indizes zurück."""
@@ -165,8 +195,9 @@ class DienstplanParser:
 
     def _parse_row(self, row) -> Optional[dict]:
         """Parst eine Zeile und gibt Person-Dict oder None zurück."""
-        row_list = list(row)
-        cells    = [cell.value if hasattr(cell, 'value') else cell for cell in row_list]
+        row_list    = list(row)
+        excel_row   = row_list[0].row if row_list and hasattr(row_list[0], 'row') else None
+        cells       = [cell.value if hasattr(cell, 'value') else cell for cell in row_list]
 
         max_col = max(
             self.column_map['name'],
@@ -202,7 +233,7 @@ class DienstplanParser:
         raw_dienst = cells[self.column_map['dienst']]
         if raw_dienst:
             dienst_text = str(raw_dienst).strip().upper()
-            if dienst_text in self.STILLE_DIENSTE:
+            if not self.alle_anzeigen and dienst_text in self.STILLE_DIENSTE:
                 return None   # still ignorieren, keine Warnung
             if dienst_text in ('KRANK', 'K'):
                 ist_krank = True
@@ -239,6 +270,7 @@ class DienstplanParser:
             'zeilen_farbe':     zeilen_farbe,
             'dienst_farbe':     dienst_farbe,
             'dienst_farbe_hex': dienst_farbe_hex,
+            'excel_row':        excel_row,
         }
 
     def _check_cell_colors(self, name_cell_obj, dienst_cell_obj):

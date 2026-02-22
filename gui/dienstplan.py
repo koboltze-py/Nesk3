@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
     QTreeView, QSplitter, QFileSystemModel,
     QScrollArea, QCheckBox
 )
-from PySide6.QtCore import Qt, QDate, QTime
+from PySide6.QtCore import Qt, QDate, QTime, Signal
 from PySide6.QtGui import QFont, QColor
 
 from config import FIORI_BLUE, FIORI_TEXT, FIORI_ERROR
@@ -99,7 +99,7 @@ class DienstplanDialog(QDialog):
         layout.addLayout(form)
 
         btn_layout = QHBoxLayout()
-        save_btn = QPushButton("💾 Speichern")
+        save_btn = QPushButton("Speichern")
         save_btn.setMinimumHeight(40)
         save_btn.setStyleSheet(f"background-color: {FIORI_BLUE}; color: white; font-size: 13px; border-radius: 4px;")
         save_btn.clicked.connect(self._save)
@@ -135,21 +135,32 @@ class DienstplanDialog(QDialog):
         self.accept()
 
 
-# Dienste die zum Standard gehören – Sonderdienste werden im Dialog angezeigt
+# Dienste die zum Standard gehören  -  Sonderdienste werden im Dialog angezeigt
 _STANDARD_DIENSTE = frozenset({'N', 'N10', 'T', 'T10', 'DT', 'DT3', 'DN', 'DN3'})
+
+_TAG_DIENSTE   = frozenset({'T', 'T10', 'DT', 'DT3'})
+_NACHT_DIENSTE = frozenset({'N', 'N10', 'NF', 'DN', 'DN3'})
 
 
 class ExportDialog(QDialog):
     """Dialog für Word-Export: Zeitraum, PAX-Zahl, Ausgabepfad, Sonderdienst-Filter."""
 
+    _STAERKEMELDUNG_DIR = (
+        r"C:\Users\DRKairport\OneDrive - Deutsches Rotes Kreuz - Kreisverband Köln e.V"
+        r"\Dateien von Erste-Hilfe-Station-Flughafen - DRK Köln e.V_ - !Gemeinsam.26"
+        r"\06_Stärkemeldung"
+    )
+
     def __init__(self, parsed_data: dict | None = None, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Word-Export – Stärkemeldung")
+        self.setWindowTitle("Word-Export  -  Stärkemeldung")
         self.setMinimumWidth(500)
         self.setMinimumHeight(460)
         self._parsed_data = parsed_data or {}
         self.result: dict | None = None
         self._checkboxen: list[tuple] = []   # (QCheckBox, vollname_lower)
+        self._pfad_auto   = True             # True = Pfad noch auto-generiert
+        self._ausgabe_pfad = ""
         self._build_ui()
 
     def _build_ui(self):
@@ -162,21 +173,24 @@ class ExportDialog(QDialog):
         self._von = QDateEdit(today)
         self._von.setCalendarPopup(True)
         self._von.setDisplayFormat("dd.MM.yyyy")
+        self._von.dateChanged.connect(self._update_default_pfad)
 
         self._bis = QDateEdit(today)
         self._bis.setCalendarPopup(True)
         self._bis.setDisplayFormat("dd.MM.yyyy")
+        self._bis.dateChanged.connect(self._update_default_pfad)
 
         self._pax = QSpinBox()
         self._pax.setRange(0, 99999)
         self._pax.setValue(0)
 
-        self._pfad_lbl = QLabel("(noch kein Pfad gewählt)")
+        self._pfad_lbl = QLabel()
         self._pfad_lbl.setWordWrap(True)
-        self._pfad_lbl.setStyleSheet("color: #555;")
-        pfad_btn = QPushButton("📂 Speicherort wählen …")
+        pfad_btn = QPushButton("Speicherort wählen ...")
         pfad_btn.clicked.connect(self._choose_path)
-        self._ausgabe_pfad = ""
+
+        # Standardpfad gleich setzen
+        self._update_default_pfad()
 
         form.addRow("Von:",       self._von)
         form.addRow("Bis:",       self._bis)
@@ -185,7 +199,7 @@ class ExportDialog(QDialog):
         form.addRow("",          self._pfad_lbl)
         layout.addLayout(form)
 
-        # ── Sonderdienst-Abschnitt ─────────────────────────────────────
+        # -- Sonderdienst-Abschnitt -------------------------------------
         sonder_personen = []
         for listen_key in ('betreuer', 'dispo'):
             for p in self._parsed_data.get(listen_key, []):
@@ -200,7 +214,7 @@ class ExportDialog(QDialog):
             layout.addWidget(sep1)
 
             sonder_lbl = QLabel(
-                "⚠️  Mitarbeiter mit Sonderdiensten:\n"
+                " Mitarbeiter mit Sonderdiensten:\n"
                 "   Haken setzen = vom Export ausschließen"
             )
             sonder_lbl.setFont(QFont("Arial", 10, QFont.Weight.Bold))
@@ -245,7 +259,7 @@ class ExportDialog(QDialog):
         layout.addWidget(sep2)
 
         btn_row = QHBoxLayout()
-        export_btn = QPushButton("📤 Exportieren")
+        export_btn = QPushButton("Exportieren")
         export_btn.setMinimumHeight(40)
         export_btn.setStyleSheet(
             f"background-color: {FIORI_BLUE}; color: white; font-size: 13px; border-radius: 4px;"
@@ -259,22 +273,60 @@ class ExportDialog(QDialog):
         btn_row.addWidget(export_btn)
         layout.addLayout(btn_row)
 
+    def _make_default_pfad(self) -> str:
+        """Erstellt Standardpfad mit Von-Bis-Datum im Ordner 06_Stärkemeldung."""
+        ziel_dir = self._STAERKEMELDUNG_DIR
+        if not os.path.isdir(ziel_dir):
+            ziel_dir = os.path.expanduser("~")
+        qv = self._von.date()
+        qb = self._bis.date()
+        von_str = f"{qv.day():02d}.{qv.month():02d}.{qv.year()}"
+        bis_str = f"{qb.day():02d}.{qb.month():02d}.{qb.year()}"
+        if qv == qb:
+            name = f"Staerkemeldung {von_str}.docx"
+        else:
+            name = f"Staerkemeldung {von_str} - {bis_str}.docx"
+        return os.path.join(ziel_dir, name)
+
+    def _update_default_pfad(self):
+        """Pfad nur aktualisieren wenn noch auto-generiert (kein manueller Pfad)."""
+        if self._pfad_auto:
+            self._ausgabe_pfad = self._make_default_pfad()
+            self._pfad_lbl.setText(self._ausgabe_pfad)
+            self._pfad_lbl.setStyleSheet("color: #333;")
+
     def _choose_path(self):
-        today_str = datetime.now().strftime("%d.%m.%Y")
-        default   = os.path.join(os.path.expanduser("~"), "Desktop",
-                                 f"Stärkemeldung {today_str}.docx")
+        default = self._ausgabe_pfad or self._make_default_pfad()
         path, _ = QFileDialog.getSaveFileName(
             self, "Ausgabedatei wählen", default,
             "Word-Dokument (*.docx)"
         )
         if path:
             self._ausgabe_pfad = path
+            self._pfad_auto    = False
             self._pfad_lbl.setText(path)
+            self._pfad_lbl.setStyleSheet("color: #333;")
 
     def _export(self):
         if not self._ausgabe_pfad:
             QMessageBox.warning(self, "Kein Pfad", "Bitte zuerst einen Speicherort wählen.")
             return
+
+        # PAX-Zahl = 0 → Nutzer darauf aufmerksam machen
+        if self._pax.value() == 0:
+            ret = QMessageBox.warning(
+                self, "PAX-Zahl ist 0",
+                "Die PAX-Zahl ist aktuell 0.\n\n"
+                "Bitte tragen Sie die Anzahl der Passagiere ein,\n"
+                "oder klicken Sie auf 'Trotzdem exportieren'.",
+                QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Ignore,
+                QMessageBox.StandardButton.Ok,
+            )
+            if ret != QMessageBox.StandardButton.Ignore:
+                self._pax.setFocus()
+                self._pax.selectAll()
+                return
+
         qv = self._von.date()
         qb = self._bis.date()
         ausgeschlossene = {vn for cb, vn in self._checkboxen if cb.isChecked()}
@@ -288,12 +340,602 @@ class ExportDialog(QDialog):
         self.accept()
 
 
+_ALLE_DIENST_TYPEN = [
+    'T', 'T10', 'N', 'N10', 'NF',
+    'DT', 'DT3', 'DN', 'DN3', 'D',
+    'FB', 'FB1', 'FB2',
+    'R', 'B1', 'B2',
+    'KRANK',
+]
+_ALLE_ZEITEN = ['%02d:%02d' % (h, m) for h in range(24) for m in (0, 15, 30, 45)]
+
+
+class EditDienstDialog(QDialog):
+    """Dialog zum Bearbeiten von Dienst, Von- und Bis-Zeit einer Zeile."""
+
+    def __init__(self, person: dict, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle('Dienst bearbeiten')
+        self.setMinimumWidth(340)
+        self.result_data: dict | None = None
+        self._person = person
+        self._build_ui()
+
+    def _build_ui(self):
+        layout = QVBoxLayout(self)
+        layout.setSpacing(12)
+
+        name_lbl = QLabel(self._person.get('vollname', ''))
+        name_lbl.setFont(QFont('Arial', 12, QFont.Weight.Bold))
+        name_lbl.setStyleSheet(f'color: {FIORI_TEXT};')
+        layout.addWidget(name_lbl)
+
+        form = QFormLayout()
+        form.setSpacing(10)
+
+        self._dienst_cb = QComboBox()
+        self._dienst_cb.setEditable(True)
+        self._dienst_cb.addItems(_ALLE_DIENST_TYPEN)
+        current = (self._person.get('dienst_kategorie') or '').upper()
+        idx = self._dienst_cb.findText(current)
+        if idx >= 0:
+            self._dienst_cb.setCurrentIndex(idx)
+        else:
+            self._dienst_cb.setCurrentText(current)
+
+        self._von_cb = QComboBox()
+        self._von_cb.setEditable(True)
+        self._von_cb.addItems(_ALLE_ZEITEN)
+        self._von_cb.setCurrentText(self._person.get('start_zeit', '') or '')
+
+        self._bis_cb = QComboBox()
+        self._bis_cb.setEditable(True)
+        self._bis_cb.addItems(_ALLE_ZEITEN)
+        self._bis_cb.setCurrentText(self._person.get('end_zeit', '') or '')
+
+        form.addRow('Dienst:', self._dienst_cb)
+        form.addRow('Von:', self._von_cb)
+        form.addRow('Bis:', self._bis_cb)
+        layout.addLayout(form)
+
+        btn_row = QHBoxLayout()
+        save_btn = QPushButton('\U0001f4be Speichern')
+        save_btn.setMinimumHeight(38)
+        save_btn.setStyleSheet(
+            f'background-color: {FIORI_BLUE}; color: white; '
+            f'font-size: 13px; border-radius: 4px;'
+        )
+        save_btn.clicked.connect(self._save)
+        cancel_btn = QPushButton('Abbrechen')
+        cancel_btn.setMinimumHeight(38)
+        cancel_btn.clicked.connect(self.reject)
+        btn_row.addStretch()
+        btn_row.addWidget(cancel_btn)
+        btn_row.addWidget(save_btn)
+        layout.addLayout(btn_row)
+
+    def _save(self):
+        dienst = self._dienst_cb.currentText().strip().upper()
+        von    = self._von_cb.currentText().strip()
+        bis    = self._bis_cb.currentText().strip()
+        self.result_data = {'dienst': dienst, 'von': von, 'bis': bis}
+        self.accept()
+
+
+class _DienstplanPane(QWidget):
+    """Einzelne Tabellen-Ansicht fuer einen geoeffneten Dienstplan."""
+
+    # Signal: dieser Pane wurde als Export-Quelle aktiviert (sendet eigenen Index)
+    export_selected = Signal(int)
+
+    def __init__(self, pane_index: int = 0, parent=None):
+        super().__init__(parent)
+        self._pane_index: int           = pane_index
+        self._parsed_data: dict | None  = None
+        self._display_data: dict | None = None
+        self._table_row_data: list      = []
+        self._excel_path: str           = ''
+        self._is_export_active: bool    = False
+        self._build_ui()
+
+    # ---------- Eigenschaften ----------
+
+    @property
+    def excel_path(self) -> str:
+        return self._excel_path
+
+    @property
+    def parsed_data(self) -> dict | None:
+        return self._parsed_data
+
+    @property
+    def is_empty(self) -> bool:
+        return not bool(self._excel_path)
+
+    def set_export_active(self, active: bool):
+        """Markiert diese Pane visuell als Export-Quelle."""
+        self._is_export_active = active
+        self._update_header_style()
+        self._export_btn.setEnabled(not active)
+        self._export_btn.setText('Aktiv fuer Export' if active else 'Fuer Export auswaehlen')
+
+    def _update_header_style(self):
+        if self._is_export_active:
+            self._header_bar.setStyleSheet(
+                'background: #0a5ba4; border-radius: 4px 4px 0 0; padding: 2px 4px;'
+            )
+            self._title_lbl.setStyleSheet('color: white; font-weight: bold; font-size: 11px;')
+        else:
+            self._header_bar.setStyleSheet(
+                'background: #f0f4f8; border: 1px solid #dce8f5; '
+                'border-radius: 4px 4px 0 0; padding: 2px 4px;'
+            )
+            self._title_lbl.setStyleSheet(f'color: {FIORI_TEXT}; font-size: 11px;')
+
+    def clear(self):
+        self._parsed_data    = None
+        self._display_data   = None
+        self._table_row_data = []
+        self._excel_path     = ''
+        self._table.clearContents()
+        self._table.setRowCount(0)
+        self._datum_lbl.setVisible(False)
+        self._status_lbl.setText('Doppelklick auf eine Datei im Baum, um sie zu laden.')
+        self._status_lbl.setStyleSheet('color: #888; padding: 2px 0;')
+        self._row_count_lbl.setText('0 Eintraege')
+        self._title_lbl.setText(f'Dienstplan {self._pane_index + 1}')
+
+    # ---------- UI ----------
+
+    def _build_ui(self):
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(2, 2, 2, 2)
+        layout.setSpacing(2)
+
+        # Header-Zeile: Titel + Export-Button + Schliessen
+        self._header_bar = QWidget()
+        header_layout = QHBoxLayout(self._header_bar)
+        header_layout.setContentsMargins(6, 3, 4, 3)
+        header_layout.setSpacing(4)
+
+        self._title_lbl = QLabel(f'Dienstplan {self._pane_index + 1}')
+        self._title_lbl.setFont(QFont('Arial', 11))
+        header_layout.addWidget(self._title_lbl)
+        header_layout.addStretch()
+
+        self._export_btn = QPushButton('Fuer Export auswaehlen')
+        self._export_btn.setFixedHeight(22)
+        self._export_btn.setStyleSheet(
+            'font-size: 10px; padding: 0 6px; border-radius: 3px; '
+            f'background: {FIORI_BLUE}; color: white; border: none;'
+        )
+        self._export_btn.clicked.connect(lambda: self.export_selected.emit(self._pane_index))
+        header_layout.addWidget(self._export_btn)
+
+        self._close_btn = QPushButton('X')
+        self._close_btn.setFixedSize(22, 22)
+        self._close_btn.setStyleSheet(
+            'font-size: 10px; font-weight: bold; padding: 0; border-radius: 3px; '
+            'background: #c0392b; color: white; border: none;'
+        )
+        self._close_btn.setToolTip('Dienstplan schliessen')
+        self._close_btn.clicked.connect(self._on_close_clicked)
+        header_layout.addWidget(self._close_btn)
+
+        self._update_header_style()
+        layout.addWidget(self._header_bar)
+
+        # Hauptinhalt
+        content = QWidget()
+        content_layout = QVBoxLayout(content)
+        content_layout.setContentsMargins(4, 2, 4, 4)
+        content_layout.setSpacing(3)
+        layout.addWidget(content, 1)
+
+        # Ersetzt layout durch content_layout fuer den Rest der UI
+        layout = content_layout
+
+        self._datum_lbl = QLabel('')
+        self._datum_lbl.setFont(QFont('Arial', 12, QFont.Weight.Bold))
+        self._datum_lbl.setStyleSheet(f'color: {FIORI_TEXT}; padding: 2px 0;')
+        self._datum_lbl.setVisible(False)
+        layout.addWidget(self._datum_lbl)
+
+        self._status_lbl = QLabel('Doppelklick auf eine Datei im Baum, um sie zu laden.')
+        self._status_lbl.setFont(QFont('Arial', 9))
+        self._status_lbl.setWordWrap(True)
+        self._status_lbl.setStyleSheet('color: #888; padding: 1px 0;')
+        layout.addWidget(self._status_lbl)
+
+        self._table = QTableWidget()
+        self._table.setColumnCount(5)
+        self._table.setHorizontalHeaderLabels([
+            'Kategorie', 'Name', 'Dienst', 'Von', 'Bis'
+        ])
+        self._table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        self._table.horizontalHeader().setStretchLastSection(False)
+        self._table.horizontalHeader().setMinimumSectionSize(40)
+        self._table.verticalHeader().setVisible(False)
+        self._table.verticalHeader().setDefaultSectionSize(18)
+        self._table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self._table.setAlternatingRowColors(True)
+        self._table.itemDoubleClicked.connect(self._on_table_double_click)
+        self._table.setStyleSheet("""
+            QTableWidget {
+                background-color: white;
+                border-radius: 6px;
+                font-size: 14px;
+                font-weight: bold;
+                gridline-color: #e8ecf0;
+            }
+            QTableWidget::item { padding: 0px 4px; }
+            QHeaderView::section {
+                background-color: #f0f4f8;
+                border: none;
+                border-bottom: 1px solid #c8d4e0;
+                padding: 2px 4px;
+                font-size: 13px;
+                font-weight: bold;
+            }
+        """)
+        layout.addWidget(self._table, 1)
+
+        self._row_count_lbl = QLabel('0 Eintraege')
+        self._row_count_lbl.setStyleSheet('color: #888;')
+        layout.addWidget(self._row_count_lbl, alignment=Qt.AlignmentFlag.AlignRight)
+
+    def _on_close_clicked(self):
+        """Pane leeren und ausblenden (ausser Pane 0 - wird nur geleert)."""
+        self.clear()
+        if self._pane_index > 0:
+            self.setVisible(False)
+
+    # ---------- Laden ----------
+
+    def load(self, path: str) -> bool:
+        """Excel-Datei einlesen und Tabelle befüllen. Gibt True bei Erfolg zurück."""
+        self._status_lbl.setText(' Datei wird eingelesen ...')
+        self._status_lbl.setStyleSheet('color: #555; padding: 2px 0;')
+        self._status_lbl.repaint()
+
+        try:
+            from functions.dienstplan_parser import DienstplanParser
+
+            display_result = DienstplanParser(path, alle_anzeigen=True).parse()
+            export_result  = DienstplanParser(path, alle_anzeigen=False).parse()
+
+            if not display_result['success']:
+                QMessageBox.critical(
+                    self, 'Fehler beim Einlesen',
+                    f"Die Datei konnte nicht geparst werden:\n\n{display_result['error']}"
+                )
+                self._status_lbl.setText('Fehler: Fehler beim Einlesen.')
+                self._status_lbl.setStyleSheet('color: #bb0000; padding: 2px 0;')
+                return False
+
+            self._excel_path   = path
+            self._display_data = display_result
+            self._parsed_data  = export_result
+
+            # Dateiname im Header anzeigen
+            dateiname = os.path.basename(path)
+            self._title_lbl.setText(dateiname)
+
+            datum = display_result.get('datum')
+            if datum:
+                self._datum_lbl.setText(f'Datum: {datum}')
+                self._datum_lbl.setVisible(True)
+            else:
+                self._datum_lbl.setVisible(False)
+
+            self._render_table_parsed(display_result)
+
+            unbekannte = display_result.get('unbekannte_dienste', [])
+            if unbekannte:
+                QMessageBox.warning(
+                    self, 'Unbekannte Dienst-Kürzel',
+                    'Folgende Dienst-Kürzel wurden nicht erkannt:\n'
+                    + '\n'.join(f'  - {d}' for d in sorted(unbekannte))
+                    + '\n\nSie werden trotzdem angezeigt.'
+                )
+
+            self._status_lbl.setText(f'Geladen: {dateiname}')
+            self._status_lbl.setStyleSheet('color: #107e3e; padding: 2px 0;')
+            return True
+
+        except Exception as e:
+            QMessageBox.critical(self, 'Fehler', f'Unerwarteter Fehler:\n{e}')
+            self._status_lbl.setText(f'Fehler: {e}')
+            self._status_lbl.setStyleSheet('color: #bb0000; padding: 2px 0;')
+            return False
+
+    # ---------- Tabelle rendern ----------
+
+    def _render_table_parsed(self, data: dict):
+        """Tabelleninhalt aus geparsten Excel-Daten aufbauen."""
+        tag_personen   = []
+        nacht_personen = []
+        sonst_personen = []
+
+        # Namen die als Stationsleitung angezeigt werden (Kleinbuchstaben)
+        STATIONSLEITUNG = {'lars peters'}
+
+        for kat, liste in (('Dispo', data.get('dispo', [])),
+                           ('Betreuer', data.get('betreuer', []))):
+            for p in liste:
+                name_lower = p.get('vollname', '').strip().lower()
+                effekt_kat = 'Stationsleitung' if name_lower in STATIONSLEITUNG else kat
+                dk = (p.get('dienst_kategorie') or '').upper()
+                if dk in _TAG_DIENSTE:
+                    tag_personen.append((effekt_kat, p))
+                elif dk in _NACHT_DIENSTE:
+                    nacht_personen.append((effekt_kat, p))
+                else:
+                    sonst_personen.append((effekt_kat, p))
+
+        kranke_personen = [('Krank', p) for p in data.get('kranke', [])]
+
+        abschnitte = []
+        if tag_personen:
+            abschnitte.append(('Tagdienst',   '#1565a8', '#ffffff', tag_personen))
+        if nacht_personen:
+            abschnitte.append(('Nachtdienst', '#0d2b4a', '#e8eeff', nacht_personen))
+        if sonst_personen:
+            abschnitte.append(('Sonstige',    '#555555', '#ffffff', sonst_personen))
+        if kranke_personen:
+            abschnitte.append(('Krank',       '#8b0000', '#ffe8e8', kranke_personen))
+
+        total_rows = sum(1 + len(personen) for _, _, _, personen in abschnitte)
+        self._table.clearSpans()
+        self._table.setRowCount(total_rows)
+
+        farben = {
+            'Dispo':           QColor('#dce8f5'),
+            'Betreuer':        QColor('#ffffff'),
+            'Stationsleitung': QColor('#fff8e1'),   # zartes Gelb
+            'Krank':           QColor('#fce8e8'),
+        }
+        text_farben = {
+            'Dispo':           QColor('#0a5ba4'),
+            'Betreuer':        QColor('#1a1a1a'),
+            'Stationsleitung': QColor('#7a5000'),   # dunkelbraun
+            'Krank':           QColor('#bb0000'),
+        }
+
+        self._table_row_data = []
+        row = 0
+        sep_font = QFont('Arial', 11, QFont.Weight.Bold)
+        for label_text, hdr_bg, hdr_fg, personen in abschnitte:
+            self._table_row_data.append(None)
+            self._table.setSpan(row, 0, 1, 5)
+            sep_item = QTableWidgetItem(label_text)
+            sep_item.setBackground(QColor(hdr_bg))
+            sep_item.setForeground(QColor(hdr_fg))
+            sep_item.setFont(sep_font)
+            sep_item.setFlags(Qt.ItemFlag.ItemIsEnabled)
+            self._table.setItem(row, 0, sep_item)
+            self._table.verticalHeader().resizeSection(row, 24)
+            row += 1
+
+            for kategorie, p in personen:
+                self._table_row_data.append(p)
+                bg = farben.get(kategorie, QColor('#ffffff'))
+                fg = text_farben.get(kategorie, QColor('#1a1a1a'))
+                vals = [
+                    kategorie,
+                    p.get('anzeigename', ''),
+                    p.get('dienst_kategorie', ''),
+                    p.get('start_zeit', '') or '',
+                    p.get('end_zeit',   '') or '',
+                ]
+                for col, val in enumerate(vals):
+                    item = QTableWidgetItem(val)
+                    item.setBackground(bg)
+                    item.setForeground(fg)
+                    self._table.setItem(row, col, item)
+
+                if p.get('ist_bulmorfahrer'):
+                    for col in range(5):
+                        self._table.item(row, col).setBackground(QColor('#fff3b0'))
+                row += 1
+
+        # Zeilenanzahl nach Abschnitt aufschlüsseln
+        tag_n   = len(tag_personen)
+        nacht_n = len(nacht_personen)
+        sonst_n = len(sonst_personen)
+        krank_n = len(kranke_personen)
+        teile = []
+        if tag_n:   teile.append(f'{tag_n} Tagdienst')
+        if nacht_n: teile.append(f'{nacht_n} Nachtdienst')
+        if sonst_n: teile.append(f'{sonst_n} Sonstige')
+        if krank_n: teile.append(f'{krank_n} Krank')
+        self._row_count_lbl.setText('  |  '.join(teile) if teile else '0 Eintraege')
+        self._row_count_lbl.setStyleSheet('color: #555; font-weight: bold; padding: 2px 0;')
+
+    # ---------- Doppelklick Tabellenzeile ----------
+
+    def _on_table_double_click(self, item):
+        """Ã–ffnet Edit-Dialog, speichert Ã„nderungen in Excel und lädt neu."""
+        row = item.row()
+        if row < 0 or row >= len(self._table_row_data):
+            return
+        person = self._table_row_data[row]
+        if person is None:
+            return
+        if not self._display_data:
+            return
+
+        dlg = EditDienstDialog(person, parent=self)
+        if dlg.exec() != QDialog.DialogCode.Accepted or not dlg.result_data:
+            return
+
+        res = dlg.result_data
+        try:
+            self._save_to_excel(person, res['dienst'], res['von'], res['bis'])
+        except Exception as e:
+            QMessageBox.critical(
+                self, 'Fehler beim Speichern',
+                f'Die Excel-Datei konnte nicht gespeichert werden:\n{e}'
+            )
+            return
+
+        excel_path = self._display_data.get('excel_path', '')
+        if not excel_path:
+            return
+        try:
+            from functions.dienstplan_parser import DienstplanParser
+            display_result = DienstplanParser(excel_path, alle_anzeigen=True).parse()
+            export_result  = DienstplanParser(excel_path, alle_anzeigen=False).parse()
+            if display_result['success']:
+                self._display_data = display_result
+                self._parsed_data  = export_result
+                datum = display_result.get('datum')
+                if datum:
+                    self._datum_lbl.setText(f'\U0001f4c5 Datum: {datum}')
+                    self._datum_lbl.setVisible(True)
+                self._render_table_parsed(display_result)
+                self._status_lbl.setText(
+                    f'\u2705 Gespeichert: {person.get("anzeigename", "")} -> {res["dienst"]}'
+                    f'  \u26a0\ufe0f Andere Nutzer m\u00fcssen die Datei neu \u00f6ffnen, '
+                    f'sonst werden die \u00c4nderungen \u00fcberschrieben!'
+                )
+                self._status_lbl.setStyleSheet('color: #b85c00; font-weight: bold; padding: 2px 0;')
+        except Exception as e:
+            QMessageBox.critical(self, 'Fehler', f'Fehler beim Neu-Laden:\n{e}')
+
+    # ---------- Excel-Schutz ----------
+
+    @staticmethod
+    def _check_excel_locked(excel_path: str):
+        """Prüft ob die Excel-Datei von einem anderen Programm geöffnet ist."""
+        import os
+        ordner     = os.path.dirname(excel_path)
+        dateiname  = os.path.basename(excel_path)
+        lock_datei = os.path.join(ordner, '~$' + dateiname)
+        if os.path.exists(lock_datei):
+            raise IOError(
+                f'Die Excel-Datei ist zurzeit auf einem anderen PC oder in Excel '
+                f'geöffnet:\n\n{dateiname}\n\n'
+                f'Bitte die Datei dort schließen und dann erneut speichern.'
+            )
+        try:
+            fh = open(excel_path, 'r+b')
+            fh.close()
+        except PermissionError:
+            raise IOError(
+                f'Die Excel-Datei ist gesperrt (kein Schreibzugriff):\n\n{dateiname}\n\n'
+                f'Bitte sicherstellen, dass die Datei nicht anderweitig geöffnet ist.'
+            )
+
+    def _save_to_excel(self, person: dict, dienst: str, von: str, bis: str):
+        """Schreibt Dienst/Von/Bis sicher in die Excel-Datei zurück (3-Ebenen-Schutz)."""
+        import os
+        import openpyxl
+        from openpyxl.styles import PatternFill
+
+        excel_path = (self._display_data or {}).get('excel_path', '')
+        column_map = (self._display_data or {}).get('column_map', {})
+        excel_row  = person.get('excel_row')
+        if not excel_path or not column_map or not excel_row:
+            raise ValueError('Excel-Pfad oder Zeilennummer nicht gefunden.')
+
+        ordner    = os.path.dirname(excel_path)
+        dateiname = os.path.basename(excel_path)
+        temp_path = os.path.join(ordner, dateiname + '.nesk3tmp')
+        nesk_lock = os.path.join(ordner, dateiname + '.nesk3lock')
+
+        self._check_excel_locked(excel_path)
+
+        if os.path.exists(nesk_lock):
+            import time
+            alter = time.time() - os.path.getmtime(nesk_lock)
+            if alter < 30:
+                raise IOError(
+                    'Eine andere Nesk3-Instanz speichert gerade dieselbe Datei.\n'
+                    'Bitte kurz warten und erneut versuchen.'
+                )
+            os.remove(nesk_lock)
+
+        try:
+            with open(nesk_lock, 'w') as lf:
+                lf.write('nesk3')
+
+            wb = openpyxl.load_workbook(excel_path)
+            ws = wb.active
+
+            dienst_cell = ws.cell(row=excel_row, column=column_map['dienst'] + 1)
+            dienst_cell.value = dienst or None
+
+            if dienst.upper() in ('KRANK', 'K'):
+                dienst_cell.fill = PatternFill(patternType='solid', fgColor='FFFF0000')
+            else:
+                dienst_cell.fill = PatternFill(patternType='none')
+
+            if column_map.get('beginn') is not None:
+                ws.cell(row=excel_row, column=column_map['beginn'] + 1).value = \
+                    self._parse_time_str(von)
+            if column_map.get('ende') is not None:
+                ws.cell(row=excel_row, column=column_map['ende'] + 1).value = \
+                    self._parse_time_str(bis)
+
+            wb.save(temp_path)
+            wb.close()
+            self._check_excel_locked(excel_path)
+            os.replace(temp_path, excel_path)
+            self._backup_excel_save(excel_path)
+
+        finally:
+            for f in (nesk_lock, temp_path):
+                try:
+                    if os.path.exists(f):
+                        os.remove(f)
+                except OSError:
+                    pass
+
+    @staticmethod
+    def _backup_excel_save(excel_path: str):
+        """Erstellt nach jedem erfolgreichen Excel-Save eine Sicherungskopie."""
+        import os, glob, shutil
+        from datetime import datetime
+        from config import BASE_DIR
+        try:
+            backup_dir = os.path.join(BASE_DIR, 'Backup Data', 'excel_saves')
+            os.makedirs(backup_dir, exist_ok=True)
+            name  = os.path.splitext(os.path.basename(excel_path))[0]
+            datum = datetime.now().strftime('%Y%m%d_%H%M%S')
+            dst   = os.path.join(backup_dir, f'{name}_{datum}.xlsx')
+            shutil.copy2(excel_path, dst)
+            alle = sorted(glob.glob(os.path.join(backup_dir, f'{name}_????????_??????.xlsx')))
+            for alt in alle[:-20]:
+                try:
+                    os.remove(alt)
+                except OSError:
+                    pass
+        except Exception:
+            pass
+
+    @staticmethod
+    def _parse_time_str(s: str):
+        """Wandelt 'HH:MM'-String in datetime.time um, oder gibt None zurück."""
+        from datetime import time as dtime
+        if not s or not s.strip():
+            return None
+        try:
+            h, m = s.strip().split(':')
+            return dtime(int(h), int(m))
+        except Exception:
+            return None
+
+
 class DienstplanWidget(QWidget):
+    MAX_PANES = 4   # bis zu 4 Dienstplaene nebeneinander
+
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._parsed_data: dict | None  = None
-        self._alle: list[Dienstplan]    = []
+        self._alle: list[Dienstplan]            = []
         self._fs_model: QFileSystemModel | None = None
+        self._export_pane_idx: int              = 0   # Index der fuer Export aktiven Pane
         self._build_ui()
 
     def _build_ui(self):
@@ -301,15 +943,21 @@ class DienstplanWidget(QWidget):
         outer.setContentsMargins(24, 24, 24, 24)
         outer.setSpacing(8)
 
-        # ── Titelzeile ─────────────────────────────────────────────────
+        # Titelzeile
         top = QHBoxLayout()
-        title = QLabel("📅 Dienstplan")
+        title = QLabel("Dienstplan")
         title.setFont(QFont("Arial", 22, QFont.Weight.Bold))
         title.setStyleSheet(f"color: {FIORI_TEXT};")
         top.addWidget(title)
         top.addStretch()
 
-        word_btn = QPushButton("📤 Word exportieren")
+        self._export_lbl = QLabel("")
+        self._export_lbl.setFont(QFont("Arial", 10))
+        self._export_lbl.setStyleSheet("color: #888;")
+        top.addWidget(self._export_lbl)
+        top.addSpacing(8)
+
+        word_btn = QPushButton("Word exportieren")
         word_btn.setMinimumHeight(36)
         word_btn.setStyleSheet(
             f"background-color: {FIORI_BLUE}; color: white; "
@@ -318,7 +966,7 @@ class DienstplanWidget(QWidget):
         word_btn.clicked.connect(self._word_exportieren)
         top.addWidget(word_btn)
 
-        reload_btn = QPushButton("🔄")
+        reload_btn = QPushButton("Neu laden")
         reload_btn.setToolTip("Ordner-Ansicht neu laden")
         reload_btn.setMinimumHeight(36)
         reload_btn.clicked.connect(self.reload_tree)
@@ -326,25 +974,19 @@ class DienstplanWidget(QWidget):
 
         outer.addLayout(top)
 
-        # ── Status-Label ───────────────────────────────────────────────
-        self._status_lbl = QLabel("Doppelklick auf eine Datei im Baum, um sie zu laden.")
-        self._status_lbl.setFont(QFont("Arial", 10))
-        self._status_lbl.setStyleSheet("color: #888; padding: 2px 0;")
-        outer.addWidget(self._status_lbl)
-
-        # ── Splitter: Dateibaum links | Tabelle rechts ─────────────────
-        splitter = QSplitter(Qt.Orientation.Horizontal)
-        splitter.setHandleWidth(4)
+        # Splitter: Dateibaum links | Panes rechts
+        outer_splitter = QSplitter(Qt.Orientation.Horizontal)
+        outer_splitter.setHandleWidth(4)
 
         # Linke Seite: Dateibaum
         tree_panel = QWidget()
         tree_panel.setMinimumWidth(180)
-        tree_panel.setMaximumWidth(360)
+        tree_panel.setMaximumWidth(340)
         tree_layout = QVBoxLayout(tree_panel)
         tree_layout.setContentsMargins(0, 0, 6, 0)
         tree_layout.setSpacing(4)
 
-        tree_header = QLabel("📂 Dienstpläne")
+        tree_header = QLabel("Dienstplaene")
         tree_header.setFont(QFont("Arial", 11, QFont.Weight.Bold))
         tree_header.setStyleSheet(f"color: {FIORI_TEXT}; padding: 4px 0;")
         tree_layout.addWidget(tree_header)
@@ -357,16 +999,9 @@ class DienstplanWidget(QWidget):
                 border-radius: 6px;
                 font-size: 12px;
             }
-            QTreeView::item {
-                padding: 3px 2px;
-            }
-            QTreeView::item:selected {
-                background-color: #dce8f5;
-                color: #0a5ba4;
-            }
-            QTreeView::item:hover {
-                background-color: #f0f4f8;
-            }
+            QTreeView::item { padding: 3px 2px; }
+            QTreeView::item:selected { background-color: #dce8f5; color: #0a5ba4; }
+            QTreeView::item:hover    { background-color: #f0f4f8; }
         """)
         self._tree.setAnimated(True)
         self._tree.setSortingEnabled(True)
@@ -378,38 +1013,29 @@ class DienstplanWidget(QWidget):
         self._ordner_lbl.setStyleSheet("color: #aaa; font-size: 9px; padding: 2px;")
         tree_layout.addWidget(self._ordner_lbl)
 
-        splitter.addWidget(tree_panel)
+        outer_splitter.addWidget(tree_panel)
 
-        # Rechte Seite: Tabelle
-        right_panel = QWidget()
-        right_layout = QVBoxLayout(right_panel)
-        right_layout.setContentsMargins(6, 0, 0, 0)
-        right_layout.setSpacing(4)
+        # Rechte Seite: horizontaler Splitter mit bis zu MAX_PANES Panes
+        self._pane_splitter = QSplitter(Qt.Orientation.Horizontal)
+        self._pane_splitter.setHandleWidth(6)
 
-        self._table = QTableWidget()
-        self._table.setColumnCount(5)
-        self._table.setHorizontalHeaderLabels([
-            "Kategorie", "Name", "Dienst", "Von", "Bis"
-        ])
-        self._table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self._table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        self._table.setAlternatingRowColors(True)
-        self._table.setStyleSheet("background-color: white; border-radius: 6px;")
-        right_layout.addWidget(self._table, 1)
+        self._panes: list[_DienstplanPane] = []
+        for i in range(self.MAX_PANES):
+            pane = _DienstplanPane(pane_index=i)
+            pane.export_selected.connect(self._set_export_pane)
+            self._panes.append(pane)
+            self._pane_splitter.addWidget(pane)
 
-        self._row_count_lbl = QLabel("0 Einträge")
-        self._row_count_lbl.setStyleSheet("color: #888;")
-        right_layout.addWidget(
-            self._row_count_lbl,
-            alignment=Qt.AlignmentFlag.AlignRight
-        )
+        # Beim Start nur 1 Pane sichtbar
+        for i in range(1, self.MAX_PANES):
+            self._panes[i].setVisible(False)
 
-        splitter.addWidget(right_panel)
-        splitter.setSizes([260, 900])
-        outer.addWidget(splitter, 1)
+        outer_splitter.addWidget(self._pane_splitter)
+        outer_splitter.setSizes([240, 900])
+        outer.addWidget(outer_splitter, 1)
 
-        # Baum beim ersten Aufbau initialisieren
+        # Export-Pane initial markieren
+        self._set_export_pane(0)
         self._setup_tree()
 
     # ------------------------------------------------------------------
@@ -417,7 +1043,7 @@ class DienstplanWidget(QWidget):
     # ------------------------------------------------------------------
 
     def _setup_tree(self):
-        """Dateibaum für den konfigurierten Ordner aufbauen."""
+        """Dateibaum fuer den konfigurierten Ordner aufbauen."""
         try:
             from functions.settings_functions import get_setting
             ordner = get_setting('dienstplan_ordner')
@@ -426,8 +1052,8 @@ class DienstplanWidget(QWidget):
 
         if not ordner or not os.path.isdir(ordner):
             self._ordner_lbl.setText(
-                "⚠️ Kein gültiger Ordner konfiguriert.\n"
-                "Bitte unter ➡ Einstellungen einen Ordner festlegen."
+                "Kein gueltiger Ordner konfiguriert.\n"
+                "Bitte unter Einstellungen einen Ordner festlegen."
             )
             self._ordner_lbl.setStyleSheet("color: #bb6600; font-size: 10px; padding: 4px;")
             return
@@ -440,7 +1066,6 @@ class DienstplanWidget(QWidget):
         self._tree.setModel(self._fs_model)
         self._tree.setRootIndex(root_idx)
 
-        # Nur Name-Spalte anzeigen
         for col in range(1, 4):
             self._tree.hideColumn(col)
         self._tree.header().setVisible(False)
@@ -463,7 +1088,73 @@ class DienstplanWidget(QWidget):
             return
         path = self._fs_model.filePath(index)
         if os.path.isfile(path) and path.lower().endswith(('.xlsx', '.xls')):
-            self._laden_excel_datei(path)
+            self._open_in_next_pane(path)
+
+    # ------------------------------------------------------------------
+    # Pane-Verwaltung
+    # ------------------------------------------------------------------
+
+    def _set_export_pane(self, idx: int):
+        """Markiert Pane idx als aktiv fuer den Word-Export."""
+        self._export_pane_idx = idx
+        for i, pane in enumerate(self._panes):
+            pane.set_export_active(i == idx)
+        # Titelzeile aktualisieren
+        pane = self._panes[idx]
+        if not pane.is_empty:
+            name = os.path.basename(pane.excel_path)
+            self._export_lbl.setText(f"Export: {name}")
+            self._export_lbl.setStyleSheet(
+                "color: #0a5ba4; font-weight: bold; "
+                "background: #dce8f5; border-radius: 4px; padding: 2px 6px;"
+            )
+        else:
+            self._export_lbl.setText("")
+
+    def _export_pane(self) -> '_DienstplanPane':
+        return self._panes[self._export_pane_idx]
+
+    def _open_in_next_pane(self, path: str):
+        """
+        Datei in der naechsten freien Pane oeffnen.
+        Bereits geoeffnet -> neu laden.
+        Alle 4 voll -> erste Pane ersetzen.
+        """
+        # Bereits geoeffnet?
+        for i, pane in enumerate(self._panes):
+            if pane.excel_path == path:
+                pane.load(path)
+                self._set_export_pane(i)
+                return
+
+        # Naechste freie sichtbare Pane
+        for i, pane in enumerate(self._panes):
+            if pane.isVisible() and pane.is_empty:
+                pane.load(path)
+                self._set_export_pane(i)
+                # Naechste Pane sichtbar machen (fuer naechsten Ladevorgang)
+                next_idx = i + 1
+                if next_idx < self.MAX_PANES:
+                    self._panes[next_idx].setVisible(True)
+                    self._pane_splitter.setSizes(
+                        [1] * (next_idx + 1) + [0] * (self.MAX_PANES - next_idx - 1)
+                    )
+                return
+
+        # Alle sichtbaren Panes belegt → neue Pane oeffnen wenn moeglich
+        visible_count = sum(1 for p in self._panes if p.isVisible())
+        if visible_count < self.MAX_PANES:
+            pane = self._panes[visible_count]
+            pane.setVisible(True)
+            pane.load(path)
+            self._set_export_pane(visible_count)
+            self._pane_splitter.setSizes([1] * (visible_count + 1) + [0] * (self.MAX_PANES - visible_count - 1))
+            return
+
+        # Alle 4 Panes belegt → Export-Pane ersetzen
+        pane = self._panes[self._export_pane_idx]
+        pane.load(path)
+        self._set_export_pane(self._export_pane_idx)
 
     # ------------------------------------------------------------------
     # Datenladen
@@ -471,119 +1162,24 @@ class DienstplanWidget(QWidget):
 
     def refresh(self):
         self._alle = []
-        self._table.setRowCount(0)
-        self._row_count_lbl.setText("0 Einträge")
-
-    def _render_table_parsed(self, data: dict):
-        """Tabelleninhalt aus geparsten Excel-Daten aufbauen."""
-        alle_personen = (
-            [('Dispo',     p) for p in data.get('dispo',    [])] +
-            [('Betreuer',  p) for p in data.get('betreuer', [])] +
-            [('Krank',     p) for p in data.get('kranke',   [])]
-        )
-        self._table.setRowCount(len(alle_personen))
-
-        farben = {
-            'Dispo':    QColor('#dce8f5'),
-            'Betreuer': QColor('#ffffff'),
-            'Krank':    QColor('#fce8e8'),
-        }
-        text_farben = {
-            'Dispo':    QColor('#0a5ba4'),
-            'Betreuer': QColor('#1a1a1a'),
-            'Krank':    QColor('#bb0000'),
-        }
-
-        for row, (kategorie, p) in enumerate(alle_personen):
-            vals = [
-                kategorie,
-                p.get('anzeigename', ''),
-                p.get('dienst_kategorie', ''),
-                p.get('start_zeit', '') or '',
-                p.get('end_zeit',   '') or '',
-            ]
-            bg = farben.get(kategorie, QColor('#ffffff'))
-            fg = text_farben.get(kategorie, QColor('#1a1a1a'))
-
-            for col, val in enumerate(vals):
-                item = QTableWidgetItem(val)
-                item.setBackground(bg)
-                item.setForeground(fg)
-                self._table.setItem(row, col, item)
-
-            if p.get('ist_bulmorfahrer'):
-                for col in range(5):
-                    self._table.item(row, col).setBackground(QColor('#fff3b0'))
-
-        betreuer_n = len(data.get('betreuer', []))
-        dispo_n    = len(data.get('dispo',    []))
-        kranke_n   = len(data.get('kranke',   []))
-        self._row_count_lbl.setText(
-            f"{betreuer_n} Betreuer  |  {dispo_n} Dispo  |  {kranke_n} Krank"
-        )
-
-    # ------------------------------------------------------------------
-    # Excel-Import
-    # ------------------------------------------------------------------
-
-    def _laden_excel_datei(self, path: str):
-        """Excel-Datei einlesen und Tabelle befüllen."""
-        self._status_lbl.setText("⏳ Datei wird eingelesen …")
-        self._status_lbl.setStyleSheet("color: #555; padding: 2px 0;")
-        self._status_lbl.repaint()
-
-        try:
-            from functions.dienstplan_parser import DienstplanParser
-            result = DienstplanParser(path).parse()
-
-            if not result['success']:
-                QMessageBox.critical(
-                    self, "Fehler beim Einlesen",
-                    f"Die Datei konnte nicht geparst werden:\n\n{result['error']}"
-                )
-                self._status_lbl.setText("❌ Fehler beim Einlesen.")
-                self._status_lbl.setStyleSheet("color: #bb0000; padding: 2px 0;")
-                return
-
-            self._parsed_data = result
-            self._render_table_parsed(result)
-
-            unbekannte = result.get('unbekannte_dienste', [])
-            if unbekannte:
-                QMessageBox.warning(
-                    self, "Unbekannte Dienst-Kürzel",
-                    "Folgende Dienst-Kürzel wurden nicht erkannt:\n"
-                    + "\n".join(f"  • {d}" for d in sorted(unbekannte))
-                    + "\n\nSie werden trotzdem angezeigt."
-                )
-
-            dateiname = os.path.basename(path)
-            self._status_lbl.setText(
-                f"✅ Geladen: {dateiname}  |  "
-                f"{len(result['betreuer'])} Betreuer, "
-                f"{len(result['dispo'])} Dispo, "
-                f"{len(result['kranke'])} Krank"
-            )
-            self._status_lbl.setStyleSheet("color: #107e3e; padding: 2px 0;")
-
-        except Exception as e:
-            QMessageBox.critical(self, "Fehler", f"Unerwarteter Fehler:\n{e}")
-            self._status_lbl.setText(f"❌ {e}")
-            self._status_lbl.setStyleSheet("color: #bb0000; padding: 2px 0;")
+        for pane in self._panes:
+            pane.clear()
+        self._set_export_pane(0)
 
     # ------------------------------------------------------------------
     # Word-Export
     # ------------------------------------------------------------------
 
     def _word_exportieren(self):
-        if not self._parsed_data:
+        pane = self._export_pane()
+        if pane.parsed_data is None:
             QMessageBox.information(
                 self, "Kein Dienstplan",
-                "Bitte zuerst eine Datei im Dateibaum auswählen (Doppelklick)."
+                "Bitte zuerst eine Datei im Dateibaum auswaehlen (Doppelklick)."
             )
             return
 
-        dlg = ExportDialog(parsed_data=self._parsed_data, parent=self)
+        dlg = ExportDialog(parsed_data=pane.parsed_data, parent=self)
         if dlg.exec() != QDialog.DialogCode.Accepted or not dlg.result:
             return
 
@@ -591,12 +1187,12 @@ class DienstplanWidget(QWidget):
         try:
             from functions.staerkemeldung_export import StaerkemeldungExport
             exporter = StaerkemeldungExport(
-                dienstplan_data          = self._parsed_data,
-                ausgabe_pfad             = params['ausgabe_pfad'],
-                von_datum                = params['von_datum'],
-                bis_datum                = params['bis_datum'],
-                pax_zahl                 = params['pax_zahl'],
-                ausgeschlossene_vollnamen = params.get('ausgeschlossene_vollnamen', set()),
+                dienstplan_data           = pane.parsed_data,
+                ausgabe_pfad              = params['ausgabe_pfad'],
+                von_datum                 = params['von_datum'],
+                bis_datum                 = params['bis_datum'],
+                pax_zahl                  = params['pax_zahl'],
+                ausgeschlossene_vollnamen  = params.get('ausgeschlossene_vollnamen', set()),
             )
             pfad, warnungen = exporter.export()
 
@@ -608,15 +1204,13 @@ class DienstplanWidget(QWidget):
 
             QMessageBox.information(
                 self, "Export erfolgreich",
-                f"✅ Stärkemeldung gespeichert unter:\n{pfad}"
+                f"Staerkemeldung gespeichert unter:\n{pfad}"
             )
-            self._status_lbl.setText(f"✅ Word-Export: {os.path.basename(pfad)}")
-            self._status_lbl.setStyleSheet("color: #107e3e; padding: 2px 0;")
+            pane._status_lbl.setText(f"Word-Export: {os.path.basename(pfad)}")
+            pane._status_lbl.setStyleSheet("color: #107e3e; padding: 2px 0;")
 
         except Exception as e:
             QMessageBox.critical(self, "Fehler beim Export", f"Fehler:\n{e}")
-            self._status_lbl.setText(f"❌ Export-Fehler: {e}")
-            self._status_lbl.setStyleSheet("color: #bb0000; padding: 2px 0;")
 
     # ------------------------------------------------------------------
     # Stubs (DB-Anbindung folgt)

@@ -18,9 +18,15 @@ def _row_factory(cursor, row):
 
 def get_connection() -> sqlite3.Connection:
     """Gibt eine neue SQLite-Verbindung zurück."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=10)
     conn.row_factory = _row_factory
     conn.execute("PRAGMA foreign_keys = ON")
+    # WAL-Modus: schützt vor Korruption bei Absturz oder OneDrive-Sync
+    conn.execute("PRAGMA journal_mode = WAL")
+    # Warte bis zu 5 Sekunden wenn DB von anderem Prozess gesperrt ist
+    conn.execute("PRAGMA busy_timeout = 5000")
+    # Mit WAL ist NORMAL sicher und schneller als FULL
+    conn.execute("PRAGMA synchronous = NORMAL")
     return conn
 
 
