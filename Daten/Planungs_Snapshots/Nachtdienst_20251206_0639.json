@@ -1,0 +1,302 @@
+{
+  "name": "Nachtdienst_20251206_0639",
+  "timestamp": "2025-12-06T06:39:33.363496",
+  "typ": "nachtdienst",
+  "frueh": {
+    "vorfeld": [
+      {
+        "vorname": "Muffed",
+        "nachname": "Badrieh",
+        "vollname": "Muffed Badrieh",
+        "anzeigename": "Badrieh",
+        "dienst_kategorie": "N",
+        "start_zeit": "18:00:00",
+        "end_zeit": "06:00:00",
+        "ist_dispo": false,
+        "ist_krank": false,
+        "ist_bulmorfahrer": false,
+        "zeilen_farbe": null,
+        "dienst_farbe": null,
+        "dienst_farbe_hex": null
+      },
+      {
+        "vorname": "Leonie",
+        "nachname": "Kleeberg",
+        "vollname": "Leonie Kleeberg",
+        "anzeigename": "Kleeberg",
+        "dienst_kategorie": "N",
+        "start_zeit": "18:00:00",
+        "end_zeit": "06:00:00",
+        "ist_dispo": false,
+        "ist_krank": false,
+        "ist_bulmorfahrer": false,
+        "zeilen_farbe": null,
+        "dienst_farbe": null,
+        "dienst_farbe_hex": null
+      },
+      {
+        "vorname": "Leandros",
+        "nachname": "Mantzas",
+        "vollname": "Leandros Mantzas",
+        "anzeigename": "Mantzas",
+        "dienst_kategorie": "N",
+        "start_zeit": "18:00:00",
+        "end_zeit": "06:00:00",
+        "ist_dispo": false,
+        "ist_krank": false,
+        "ist_bulmorfahrer": false,
+        "zeilen_farbe": null,
+        "dienst_farbe": null,
+        "dienst_farbe_hex": null
+      },
+      {
+        "vorname": "Noah",
+        "nachname": "Pieper",
+        "vollname": "Noah Pieper",
+        "anzeigename": "Pieper",
+        "dienst_kategorie": "N",
+        "start_zeit": "18:00:00",
+        "end_zeit": "00:45:00",
+        "ist_dispo": false,
+        "ist_krank": false,
+        "ist_bulmorfahrer": false,
+        "zeilen_farbe": null,
+        "dienst_farbe": null,
+        "dienst_farbe_hex": null
+      },
+      {
+        "vorname": "Sanem",
+        "nachname": "Toptas",
+        "vollname": "Sanem Toptas",
+        "anzeigename": "Toptas",
+        "dienst_kategorie": "N10",
+        "start_zeit": "21:00:00",
+        "end_zeit": "07:00:00",
+        "ist_dispo": false,
+        "ist_krank": false,
+        "ist_bulmorfahrer": false,
+        "zeilen_farbe": null,
+        "dienst_farbe": null,
+        "dienst_farbe_hex": null
+      }
+    ],
+    "terminal": [
+      {
+        "vorname": "Hassan",
+        "nachname": "Nazari",
+        "vollname": "Hassan Nazari",
+        "anzeigename": "Nazari",
+        "dienst_kategorie": "N",
+        "start_zeit": "18:00:00",
+        "end_zeit": "06:00:00",
+        "ist_dispo": false,
+        "ist_krank": false,
+        "ist_bulmorfahrer": false,
+        "zeilen_farbe": "gray",
+        "dienst_farbe": null,
+        "dienst_farbe_hex": "FFF5F5F5"
+      }
+    ],
+    "c72": [
+      {
+        "vorname": "Paulo",
+        "nachname": "Blei",
+        "vollname": "Paulo Blei",
+        "anzeigename": "Blei Pa",
+        "dienst_kategorie": "N",
+        "start_zeit": "18:00:00",
+        "end_zeit": "06:00:00",
+        "ist_dispo": false,
+        "ist_krank": false,
+        "ist_bulmorfahrer": false,
+        "zeilen_farbe": "gray",
+        "dienst_farbe": null,
+        "dienst_farbe_hex": "FFF5F5F5"
+      }
+    ],
+    "bulmor": [
+      {
+        "vorname": "Erison",
+        "nachname": "Idic",
+        "vollname": "Erison Idic",
+        "anzeigename": "Idic Er",
+        "dienst_kategorie": "N",
+        "start_zeit": "18:00:00",
+        "end_zeit": "06:00:00",
+        "ist_dispo": false,
+        "ist_krank": false,
+        "ist_bulmorfahrer": true,
+        "zeilen_farbe": null,
+        "dienst_farbe": "yellow",
+        "dienst_farbe_hex": "FFFFFF00"
+      },
+      {
+        "vorname": "Aljoscha",
+        "nachname": "Rivola",
+        "vollname": "Aljoscha Rivola",
+        "anzeigename": "Rivola",
+        "dienst_kategorie": "N10",
+        "start_zeit": "21:00:00",
+        "end_zeit": "07:00:00",
+        "ist_dispo": false,
+        "ist_krank": false,
+        "ist_bulmorfahrer": true,
+        "zeilen_farbe": null,
+        "dienst_farbe": "yellow",
+        "dienst_farbe_hex": "FFFFFF00"
+      }
+    ],
+    "springer": []
+  },
+  "spaet": {
+    "vorfeld": [
+      {
+        "vorname": "Hassan",
+        "nachname": "Nazari",
+        "vollname": "Hassan Nazari",
+        "anzeigename": "Nazari",
+        "dienst_kategorie": "N",
+        "start_zeit": "18:00:00",
+        "end_zeit": "06:00:00",
+        "ist_dispo": false,
+        "ist_krank": false,
+        "ist_bulmorfahrer": false,
+        "zeilen_farbe": "gray",
+        "dienst_farbe": null,
+        "dienst_farbe_hex": "FFF5F5F5"
+      }
+    ],
+    "terminal": [
+      {
+        "vorname": "Muffed",
+        "nachname": "Badrieh",
+        "vollname": "Muffed Badrieh",
+        "anzeigename": "Badrieh",
+        "dienst_kategorie": "N",
+        "start_zeit": "18:00:00",
+        "end_zeit": "06:00:00",
+        "ist_dispo": false,
+        "ist_krank": false,
+        "ist_bulmorfahrer": false,
+        "zeilen_farbe": null,
+        "dienst_farbe": null,
+        "dienst_farbe_hex": null
+      },
+      {
+        "vorname": "Leonie",
+        "nachname": "Kleeberg",
+        "vollname": "Leonie Kleeberg",
+        "anzeigename": "Kleeberg",
+        "dienst_kategorie": "N",
+        "start_zeit": "18:00:00",
+        "end_zeit": "06:00:00",
+        "ist_dispo": false,
+        "ist_krank": false,
+        "ist_bulmorfahrer": false,
+        "zeilen_farbe": null,
+        "dienst_farbe": null,
+        "dienst_farbe_hex": null
+      },
+      {
+        "vorname": "Leandros",
+        "nachname": "Mantzas",
+        "vollname": "Leandros Mantzas",
+        "anzeigename": "Mantzas",
+        "dienst_kategorie": "N",
+        "start_zeit": "18:00:00",
+        "end_zeit": "06:00:00",
+        "ist_dispo": false,
+        "ist_krank": false,
+        "ist_bulmorfahrer": false,
+        "zeilen_farbe": null,
+        "dienst_farbe": null,
+        "dienst_farbe_hex": null
+      },
+      {
+        "vorname": "Noah",
+        "nachname": "Pieper",
+        "vollname": "Noah Pieper",
+        "anzeigename": "Pieper",
+        "dienst_kategorie": "N",
+        "start_zeit": "18:00:00",
+        "end_zeit": "00:45:00",
+        "ist_dispo": false,
+        "ist_krank": false,
+        "ist_bulmorfahrer": false,
+        "zeilen_farbe": null,
+        "dienst_farbe": null,
+        "dienst_farbe_hex": null
+      },
+      {
+        "vorname": "Sanem",
+        "nachname": "Toptas",
+        "vollname": "Sanem Toptas",
+        "anzeigename": "Toptas",
+        "dienst_kategorie": "N10",
+        "start_zeit": "21:00:00",
+        "end_zeit": "07:00:00",
+        "ist_dispo": false,
+        "ist_krank": false,
+        "ist_bulmorfahrer": false,
+        "zeilen_farbe": null,
+        "dienst_farbe": null,
+        "dienst_farbe_hex": null
+      }
+    ],
+    "c72": [
+      {
+        "vorname": "Paulo",
+        "nachname": "Blei",
+        "vollname": "Paulo Blei",
+        "anzeigename": "Blei Pa",
+        "dienst_kategorie": "N",
+        "start_zeit": "18:00:00",
+        "end_zeit": "06:00:00",
+        "ist_dispo": false,
+        "ist_krank": false,
+        "ist_bulmorfahrer": false,
+        "zeilen_farbe": "gray",
+        "dienst_farbe": null,
+        "dienst_farbe_hex": "FFF5F5F5"
+      }
+    ],
+    "bulmor": [
+      {
+        "vorname": "Erison",
+        "nachname": "Idic",
+        "vollname": "Erison Idic",
+        "anzeigename": "Idic Er",
+        "dienst_kategorie": "N",
+        "start_zeit": "18:00:00",
+        "end_zeit": "06:00:00",
+        "ist_dispo": false,
+        "ist_krank": false,
+        "ist_bulmorfahrer": true,
+        "zeilen_farbe": null,
+        "dienst_farbe": "yellow",
+        "dienst_farbe_hex": "FFFFFF00"
+      },
+      {
+        "vorname": "Aljoscha",
+        "nachname": "Rivola",
+        "vollname": "Aljoscha Rivola",
+        "anzeigename": "Rivola",
+        "dienst_kategorie": "N10",
+        "start_zeit": "21:00:00",
+        "end_zeit": "07:00:00",
+        "ist_dispo": false,
+        "ist_krank": false,
+        "ist_bulmorfahrer": true,
+        "zeilen_farbe": null,
+        "dienst_farbe": "yellow",
+        "dienst_farbe_hex": "FFFFFF00"
+      }
+    ],
+    "springer": []
+  },
+  "dienstplan_info": {
+    "datum": null,
+    "vorhanden": true,
+    "file_path": "C:/Users/DRKairport/OneDrive - Deutsches Rotes Kreuz - Kreisverband Köln e.V/Dateien von Erste-Hilfe-Station-Flughafen - DRK Köln e.V_ - !Gemeinsam.26/04_Tagesdienstpläne/12_Dezember/01.12.2025.xlsx"
+  }
+}

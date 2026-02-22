@@ -1,0 +1,23 @@
+{
+    "app_name": "Nesk3",
+    "version": "1.0.0",
+    "organisation": "DRK Flughafen Köln",
+    "sprache": "de",
+    "db": {
+        "host": "localhost",
+        "port": 5432,
+        "database": "nesk3",
+        "user": "postgres",
+        "password": "PASSWORT_HIER"
+    },
+    "backup": {
+        "auto_backup": true,
+        "intervall_tage": 1,
+        "max_backups": 30
+    },
+    "ui": {
+        "fenster_breite": 1280,
+        "fenster_hoehe": 800,
+        "sidebar_breite": 220
+    }
+}

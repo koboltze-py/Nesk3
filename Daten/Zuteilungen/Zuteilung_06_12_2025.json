@@ -1,0 +1,527 @@
+{
+  "datum": "06.12.2025",
+  "gespeichert_am": "06.12.2025 05:11:47",
+  "dienstplan_datei": null,
+  "tagdienst_vormittag": {
+    "vorfeld": [
+      {
+        "anzeigename": "Badrieh",
+        "dienst_kategorie": "T",
+        "start_zeit": "06:00:00",
+        "end_zeit": "18:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Fekar",
+        "dienst_kategorie": "T10",
+        "start_zeit": "09:00:00",
+        "end_zeit": "19:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Geißelbrecht",
+        "dienst_kategorie": "T10",
+        "start_zeit": "09:00:00",
+        "end_zeit": "19:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Tepealan",
+        "dienst_kategorie": "T10",
+        "start_zeit": "09:00:00",
+        "end_zeit": "19:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Thiebes",
+        "dienst_kategorie": "T10",
+        "start_zeit": "09:00:00",
+        "end_zeit": "19:00:00",
+        "mitarbeiter_id": ""
+      }
+    ],
+    "terminal": [
+      {
+        "anzeigename": "Doubli",
+        "dienst_kategorie": "T10",
+        "start_zeit": "09:00:00",
+        "end_zeit": "19:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Erdeneshoo",
+        "dienst_kategorie": "T10",
+        "start_zeit": "09:00:00",
+        "end_zeit": "19:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Gablitschka",
+        "dienst_kategorie": "T",
+        "start_zeit": "06:00:00",
+        "end_zeit": "18:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Roth",
+        "dienst_kategorie": "T",
+        "start_zeit": "06:00:00",
+        "end_zeit": "18:00:00",
+        "mitarbeiter_id": ""
+      }
+    ],
+    "c72": [
+      {
+        "anzeigename": "Mohammadi",
+        "dienst_kategorie": "T",
+        "start_zeit": "06:00:00",
+        "end_zeit": "18:00:00",
+        "mitarbeiter_id": ""
+      }
+    ],
+    "bulmor": [
+      {
+        "anzeigename": "Su",
+        "dienst_kategorie": "T",
+        "start_zeit": "06:00:00",
+        "end_zeit": "18:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Tamer",
+        "dienst_kategorie": "T",
+        "start_zeit": "06:00:00",
+        "end_zeit": "18:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Üzülmez",
+        "dienst_kategorie": "T",
+        "start_zeit": "06:00:00",
+        "end_zeit": "18:00:00",
+        "mitarbeiter_id": ""
+      }
+    ],
+    "springer": [
+      {
+        "anzeigename": "Kalbfleisch",
+        "dienst_kategorie": "T",
+        "start_zeit": "06:00:00",
+        "end_zeit": "18:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Mohammed",
+        "dienst_kategorie": "T10",
+        "start_zeit": "09:00:00",
+        "end_zeit": "19:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Niedermüller",
+        "dienst_kategorie": "T10",
+        "start_zeit": "09:00:00",
+        "end_zeit": "19:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Rentschke",
+        "dienst_kategorie": "T10",
+        "start_zeit": "09:00:00",
+        "end_zeit": "19:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Tosun",
+        "dienst_kategorie": "T",
+        "start_zeit": "13:00:00",
+        "end_zeit": "21:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Yildiz",
+        "dienst_kategorie": "T8",
+        "start_zeit": "10:00:00",
+        "end_zeit": "18:00:00",
+        "mitarbeiter_id": ""
+      }
+    ]
+  },
+  "tagdienst_nachmittag": {
+    "vorfeld": [
+      {
+        "anzeigename": "Doubli",
+        "dienst_kategorie": "T10",
+        "start_zeit": "09:00:00",
+        "end_zeit": "19:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Erdeneshoo",
+        "dienst_kategorie": "T10",
+        "start_zeit": "09:00:00",
+        "end_zeit": "19:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Gablitschka",
+        "dienst_kategorie": "T",
+        "start_zeit": "06:00:00",
+        "end_zeit": "18:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Roth",
+        "dienst_kategorie": "T",
+        "start_zeit": "06:00:00",
+        "end_zeit": "18:00:00",
+        "mitarbeiter_id": ""
+      }
+    ],
+    "terminal": [
+      {
+        "anzeigename": "Badrieh",
+        "dienst_kategorie": "T",
+        "start_zeit": "06:00:00",
+        "end_zeit": "18:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Fekar",
+        "dienst_kategorie": "T10",
+        "start_zeit": "09:00:00",
+        "end_zeit": "19:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Geißelbrecht",
+        "dienst_kategorie": "T10",
+        "start_zeit": "09:00:00",
+        "end_zeit": "19:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Mohammadi",
+        "dienst_kategorie": "T",
+        "start_zeit": "06:00:00",
+        "end_zeit": "18:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Thiebes",
+        "dienst_kategorie": "T10",
+        "start_zeit": "09:00:00",
+        "end_zeit": "19:00:00",
+        "mitarbeiter_id": ""
+      }
+    ],
+    "c72": [
+      {
+        "anzeigename": "Tepealan",
+        "dienst_kategorie": "T10",
+        "start_zeit": "09:00:00",
+        "end_zeit": "19:00:00",
+        "mitarbeiter_id": ""
+      }
+    ],
+    "bulmor": [
+      {
+        "anzeigename": "Su",
+        "dienst_kategorie": "T",
+        "start_zeit": "06:00:00",
+        "end_zeit": "18:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Tamer",
+        "dienst_kategorie": "T",
+        "start_zeit": "06:00:00",
+        "end_zeit": "18:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Üzülmez",
+        "dienst_kategorie": "T",
+        "start_zeit": "06:00:00",
+        "end_zeit": "18:00:00",
+        "mitarbeiter_id": ""
+      }
+    ],
+    "springer": [
+      {
+        "anzeigename": "Kalbfleisch",
+        "dienst_kategorie": "T",
+        "start_zeit": "06:00:00",
+        "end_zeit": "18:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Mohammed",
+        "dienst_kategorie": "T10",
+        "start_zeit": "09:00:00",
+        "end_zeit": "19:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Niedermüller",
+        "dienst_kategorie": "T10",
+        "start_zeit": "09:00:00",
+        "end_zeit": "19:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Rentschke",
+        "dienst_kategorie": "T10",
+        "start_zeit": "09:00:00",
+        "end_zeit": "19:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Tosun",
+        "dienst_kategorie": "T",
+        "start_zeit": "13:00:00",
+        "end_zeit": "21:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Yildiz",
+        "dienst_kategorie": "T8",
+        "start_zeit": "10:00:00",
+        "end_zeit": "18:00:00",
+        "mitarbeiter_id": ""
+      }
+    ]
+  },
+  "nachtdienst_frueh": {
+    "vorfeld": [
+      {
+        "anzeigename": "Bakkal Em",
+        "dienst_kategorie": "N",
+        "start_zeit": "18:00:00",
+        "end_zeit": "06:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Hassainia",
+        "dienst_kategorie": "N",
+        "start_zeit": "18:00:00",
+        "end_zeit": "06:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Hein",
+        "dienst_kategorie": "N10",
+        "start_zeit": "21:00:00",
+        "end_zeit": "07:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Oh",
+        "dienst_kategorie": "N",
+        "start_zeit": "18:00:00",
+        "end_zeit": "06:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Suna",
+        "dienst_kategorie": "N10",
+        "start_zeit": "21:00:00",
+        "end_zeit": "07:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Timera",
+        "dienst_kategorie": "N10",
+        "start_zeit": "21:00:00",
+        "end_zeit": "07:00:00",
+        "mitarbeiter_id": ""
+      }
+    ],
+    "terminal": [
+      {
+        "anzeigename": "Fijuljanin",
+        "dienst_kategorie": "N",
+        "start_zeit": "18:00:00",
+        "end_zeit": "06:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Isa",
+        "dienst_kategorie": "N10",
+        "start_zeit": "21:00:00",
+        "end_zeit": "07:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Lehmann Ja",
+        "dienst_kategorie": "N10",
+        "start_zeit": "21:00:00",
+        "end_zeit": "07:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Nazari",
+        "dienst_kategorie": "N",
+        "start_zeit": "18:00:00",
+        "end_zeit": "06:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Pala",
+        "dienst_kategorie": "N",
+        "start_zeit": "18:00:00",
+        "end_zeit": "06:00:00",
+        "mitarbeiter_id": ""
+      }
+    ],
+    "c72": [
+      {
+        "anzeigename": "Lehmann Gu",
+        "dienst_kategorie": "N",
+        "start_zeit": "18:00:00",
+        "end_zeit": "06:00:00",
+        "mitarbeiter_id": ""
+      }
+    ],
+    "bulmor": [
+      {
+        "anzeigename": "Bakkal Ke",
+        "dienst_kategorie": "N",
+        "start_zeit": "18:00:00",
+        "end_zeit": "06:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Idic",
+        "dienst_kategorie": "N",
+        "start_zeit": "18:00:00",
+        "end_zeit": "06:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Pullen",
+        "dienst_kategorie": "N",
+        "start_zeit": "18:00:00",
+        "end_zeit": "06:00:00",
+        "mitarbeiter_id": ""
+      }
+    ],
+    "springer": []
+  },
+  "nachtdienst_spaet": {
+    "vorfeld": [
+      {
+        "anzeigename": "Fijuljanin",
+        "dienst_kategorie": "N",
+        "start_zeit": "18:00:00",
+        "end_zeit": "06:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Isa",
+        "dienst_kategorie": "N10",
+        "start_zeit": "21:00:00",
+        "end_zeit": "07:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Lehmann Ja",
+        "dienst_kategorie": "N10",
+        "start_zeit": "21:00:00",
+        "end_zeit": "07:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Nazari",
+        "dienst_kategorie": "N",
+        "start_zeit": "18:00:00",
+        "end_zeit": "06:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Pala",
+        "dienst_kategorie": "N",
+        "start_zeit": "18:00:00",
+        "end_zeit": "06:00:00",
+        "mitarbeiter_id": ""
+      }
+    ],
+    "terminal": [
+      {
+        "anzeigename": "Bakkal Em",
+        "dienst_kategorie": "N",
+        "start_zeit": "18:00:00",
+        "end_zeit": "06:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Hassainia",
+        "dienst_kategorie": "N",
+        "start_zeit": "18:00:00",
+        "end_zeit": "06:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Hein",
+        "dienst_kategorie": "N10",
+        "start_zeit": "21:00:00",
+        "end_zeit": "07:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Lehmann Gu",
+        "dienst_kategorie": "N",
+        "start_zeit": "18:00:00",
+        "end_zeit": "06:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Oh",
+        "dienst_kategorie": "N",
+        "start_zeit": "18:00:00",
+        "end_zeit": "06:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Timera",
+        "dienst_kategorie": "N10",
+        "start_zeit": "21:00:00",
+        "end_zeit": "07:00:00",
+        "mitarbeiter_id": ""
+      }
+    ],
+    "c72": [
+      {
+        "anzeigename": "Suna",
+        "dienst_kategorie": "N10",
+        "start_zeit": "21:00:00",
+        "end_zeit": "07:00:00",
+        "mitarbeiter_id": ""
+      }
+    ],
+    "bulmor": [
+      {
+        "anzeigename": "Bakkal Ke",
+        "dienst_kategorie": "N",
+        "start_zeit": "18:00:00",
+        "end_zeit": "06:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Idic",
+        "dienst_kategorie": "N",
+        "start_zeit": "18:00:00",
+        "end_zeit": "06:00:00",
+        "mitarbeiter_id": ""
+      },
+      {
+        "anzeigename": "Pullen",
+        "dienst_kategorie": "N",
+        "start_zeit": "18:00:00",
+        "end_zeit": "06:00:00",
+        "mitarbeiter_id": ""
+      }
+    ],
+    "springer": []
+  }
+}
