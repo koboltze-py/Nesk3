@@ -32,8 +32,12 @@ def _find_base_dir() -> str:
 
 BASE_DIR  = _find_base_dir()
 
-# ─── SQLite Datenbankpfad ───────────────────────────────────────────────────
-DB_PATH = os.path.join(BASE_DIR, "nesk3.db")
+# ─── SQLite Datenbankpfad ─────────────────────────────────────────────────────
+# Die Datenbank liegt im Unterordner "database SQL" des Projektverzeichnisses.
+# Im EXE-Modus zeigt BASE_DIR auf den OneDrive-Ordner des angemeldeten Nutzers.
+_DB_DIR = os.path.join(BASE_DIR, "database SQL")
+DB_PATH = os.path.join(_DB_DIR, "nesk3.db")
+os.makedirs(_DB_DIR, exist_ok=True)
 
 # ─── Anwendungseinstellungen ──────────────────────────────────────────────────
 APP_NAME    = "Nesk3 – DRK Flughafen Köln"

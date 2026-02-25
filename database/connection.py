@@ -1,6 +1,7 @@
 """
 SQLite Datenbankverbindung
-Verwaltet Verbindungen zur Nesk3 SQLite-Datenbank
+Verwaltet Verbindungen zur Nesk3 SQLite-Datenbank.
+WAL-Modus für sicheres gleichzeitiges Lesen von mehreren PCs.
 """
 import sqlite3
 from contextlib import contextmanager
@@ -11,21 +12,19 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import DB_PATH
 
 
-def _row_factory(cursor, row):
-    """Gibt Zeilen als dict zurück."""
-    return {col[0]: row[idx] for idx, col in enumerate(cursor.description)}
+def _row_factory(cursor: sqlite3.Cursor, row: tuple) -> dict:
+    """Gibt jede Zeile als dict zurück (Spaltenname → Wert)."""
+    cols = [c[0] for c in cursor.description]
+    return dict(zip(cols, row))
 
 
 def get_connection() -> sqlite3.Connection:
-    """Gibt eine neue SQLite-Verbindung zurück."""
+    """Gibt eine neue SQLite-Verbindung zurück (WAL-Modus, dict-Zeilen)."""
     conn = sqlite3.connect(DB_PATH, timeout=10)
     conn.row_factory = _row_factory
-    conn.execute("PRAGMA foreign_keys = ON")
-    # WAL-Modus: schützt vor Korruption bei Absturz oder OneDrive-Sync
     conn.execute("PRAGMA journal_mode = WAL")
-    # Warte bis zu 5 Sekunden wenn DB von anderem Prozess gesperrt ist
+    conn.execute("PRAGMA foreign_keys = ON")
     conn.execute("PRAGMA busy_timeout = 5000")
-    # Mit WAL ist NORMAL sicher und schneller als FULL
     conn.execute("PRAGMA synchronous = NORMAL")
     return conn
 
@@ -39,7 +38,8 @@ def test_connection() -> tuple[bool, str]:
         conn = get_connection()
         cur = conn.cursor()
         cur.execute("SELECT sqlite_version()")
-        version = cur.fetchone()["sqlite_version()"]
+        row = cur.fetchone()
+        version = row["sqlite_version()"] if row else "?"
         conn.close()
         return True, f"SQLite {version}  |  {DB_PATH}"
     except Exception as e:
@@ -50,6 +50,7 @@ def test_connection() -> tuple[bool, str]:
 def db_cursor(commit: bool = False):
     """
     Kontextmanager für DB-Cursor mit automatischem Commit/Rollback.
+    Cursor liefert Zeilen als dict.
 
     Verwendung:
         with db_cursor(commit=True) as cur:

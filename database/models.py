@@ -57,3 +57,83 @@ class Position:
     id:   Optional[int] = None
     name: str           = ""
     kuerzel: str        = ""
+
+
+@dataclass
+class UebergabeProtokoll:
+    """Repräsentiert ein Schicht-Übergabeprotokoll."""
+    id:                 Optional[int]  = None
+    datum:              str            = ""          # YYYY-MM-DD
+    schicht_typ:        str            = "tagdienst" # tagdienst | nachtdienst
+    beginn_zeit:        str            = ""          # HH:MM
+    ende_zeit:          str            = ""          # HH:MM
+    patienten_anzahl:   int            = 0
+    personal:           str            = ""
+    ereignisse:         str            = ""
+    massnahmen:         str            = ""
+    uebergabe_notiz:    str            = ""
+    ersteller:          str            = ""
+    abzeichner:         str            = ""
+    status:             str            = "offen"     # offen | abgeschlossen
+    erstellt_am:        Optional[datetime] = None
+    geaendert_am:       Optional[datetime] = None
+
+
+@dataclass
+class Fahrzeug:
+    """Repräsentiert ein Fahrzeug."""
+    id:             Optional[int] = None
+    kennzeichen:    str           = ""
+    typ:            str           = ""          # RTW, KTW, PKW ...
+    marke:          str           = ""
+    modell:         str           = ""
+    baujahr:        Optional[int] = None
+    fahrgestellnr:  str           = ""
+    tuev_datum:     str           = ""          # YYYY-MM-DD
+    notizen:        str           = ""
+    aktiv:          int           = 1
+    erstellt_am:    Optional[datetime] = None
+    geaendert_am:   Optional[datetime] = None
+
+
+@dataclass
+class FahrzeugStatus:
+    """Repräsentiert einen Status-Eintrag in der Historie."""
+    id:          Optional[int] = None
+    fahrzeug_id: Optional[int] = None
+    status:      str           = "fahrbereit"  # fahrbereit|defekt|werkstatt|ausser_dienst|sonstiges
+    von:         str           = ""            # YYYY-MM-DD
+    bis:         str           = ""            # YYYY-MM-DD oder leer
+    grund:       str           = ""
+    erstellt_am: Optional[datetime] = None
+
+
+@dataclass
+class FahrzeugSchaden:
+    """Repräsentiert einen Schaden an einem Fahrzeug."""
+    id:           Optional[int] = None
+    fahrzeug_id:  Optional[int] = None
+    datum:        str           = ""       # YYYY-MM-DD
+    beschreibung: str           = ""
+    schwere:      str           = "gering" # gering|mittel|schwer
+    kommentar:    str           = ""
+    behoben:      int           = 0
+    behoben_am:   str           = ""
+    erstellt_am:  Optional[datetime] = None
+    geaendert_am: Optional[datetime] = None
+
+
+@dataclass
+class FahrzeugTermin:
+    """Repräsentiert einen Termin (TÜV, Inspektion etc.) für ein Fahrzeug."""
+    id:           Optional[int] = None
+    fahrzeug_id:  Optional[int] = None
+    datum:        str           = ""         # YYYY-MM-DD
+    uhrzeit:      str           = ""         # HH:MM
+    typ:          str           = "sonstiges" # tuev|inspektion|reparatur|hauptuntersuchung|sonstiges
+    titel:        str           = ""
+    beschreibung: str           = ""
+    kommentar:    str           = ""
+    erledigt:     int           = 0
+    erstellt_am:  Optional[datetime] = None
+    geaendert_am: Optional[datetime] = None

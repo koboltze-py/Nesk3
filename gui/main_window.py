@@ -4,6 +4,7 @@ SAP Fiori-Design mit Sidebar-Navigation
 """
 import sys
 import os
+from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from PySide6.QtWidgets import (
@@ -11,24 +12,28 @@ from PySide6.QtWidgets import (
     QPushButton, QLabel, QStackedWidget, QFrame, QSizePolicy
 )
 from PySide6.QtCore import Qt, QSize
-from PySide6.QtGui import QFont, QColor
+from PySide6.QtGui import QFont, QColor, QPixmap
 
 from config import (
-    APP_NAME, APP_VERSION,
+    APP_NAME, APP_VERSION, BASE_DIR,
     FIORI_SIDEBAR_BG, FIORI_BLUE, FIORI_WHITE, FIORI_LIGHT_BLUE, FIORI_TEXT
 )
 from gui.dashboard    import DashboardWidget
-from gui.mitarbeiter  import MitarbeiterWidget
+from gui.aufgaben     import AufgabenWidget
 from gui.dienstplan   import DienstplanWidget
+from gui.uebergabe    import UebergabeWidget
+from gui.fahrzeuge    import FahrzeugeWidget
 from gui.einstellungen import EinstellungenWidget
 
 
 NAV_ITEMS = [
     ("🏠", "Dashboard",    0),
-    ("👥", "Mitarbeiter",  1),
+    ("📋", "!Aufgaben Nacht", 1),
     ("📅", "Dienstplan",   2),
-    ("💾", "Backup",       3),
-    ("⚙️",  "Einstellungen", 4),
+    ("📋", "Übergabe",     3),
+    ("🚗", "Fahrzeuge",    4),
+    ("💾", "Backup",       5),
+    ("⚙️",  "Einstellungen", 6),
 ]
 
 
@@ -107,19 +112,25 @@ class MainWindow(QMainWindow):
 
         # Logo-Bereich
         logo_frame = QFrame()
-        logo_frame.setFixedHeight(70)
+        logo_frame.setFixedHeight(180)
         logo_layout = QVBoxLayout(logo_frame)
-        logo_layout.setContentsMargins(8, 12, 8, 4)
+        logo_layout.setContentsMargins(8, 8, 8, 8)
+        logo_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        title_lbl = QLabel("NESK3")
-        title_lbl.setFont(QFont("Arial", 18, QFont.Weight.Bold))
-        title_lbl.setStyleSheet("color: white;")
-        logo_layout.addWidget(title_lbl)
-
-        sub_lbl = QLabel("DRK Flughafen Köln")
-        sub_lbl.setFont(QFont("Arial", 9))
-        sub_lbl.setStyleSheet("color: #8fadc8;")
-        logo_layout.addWidget(sub_lbl)
+        logo_lbl = QLabel()
+        logo_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        _logo_path = str(Path(BASE_DIR) / "Daten" / "Logo" / "unnamed (1).jpg")
+        _pix = QPixmap(_logo_path)
+        if not _pix.isNull():
+            _pix = _pix.scaledToWidth(200, Qt.TransformationMode.SmoothTransformation)
+            if _pix.height() > 160:
+                _pix = _pix.scaledToHeight(160, Qt.TransformationMode.SmoothTransformation)
+            logo_lbl.setPixmap(_pix)
+        else:
+            logo_lbl.setText("NESK3")
+            logo_lbl.setFont(QFont("Arial", 18, QFont.Weight.Bold))
+            logo_lbl.setStyleSheet("color: white;")
+        logo_layout.addWidget(logo_lbl)
 
         layout.addWidget(logo_frame)
 
@@ -155,14 +166,18 @@ class MainWindow(QMainWindow):
         self._stack = QStackedWidget()
 
         # Pages
-        self._dashboard_page   = DashboardWidget()
-        self._mitarbeiter_page = MitarbeiterWidget()
-        self._dienstplan_page  = DienstplanWidget()
-        self._backup_page      = self._placeholder_page("💾 Backup", "Backup-Verwaltung wird implementiert.")
-        self._settings_page    = EinstellungenWidget()
+        self._dashboard_page  = DashboardWidget()
+        self._aufgaben_page   = AufgabenWidget()
+        self._dienstplan_page = DienstplanWidget()
+        self._uebergabe_page  = UebergabeWidget()
+        self._fahrzeuge_page  = FahrzeugeWidget()
+        self._backup_page     = self._placeholder_page("💾 Backup", "Backup-Verwaltung wird implementiert.")
+        self._settings_page   = EinstellungenWidget()
 
-        for page in [self._dashboard_page, self._mitarbeiter_page,
-                     self._dienstplan_page, self._backup_page, self._settings_page]:
+        for page in [self._dashboard_page, self._aufgaben_page,
+                     self._dienstplan_page, self._uebergabe_page,
+                     self._fahrzeuge_page,
+                     self._backup_page, self._settings_page]:
             self._stack.addWidget(page)
 
         layout.addWidget(self._stack)
@@ -190,6 +205,11 @@ class MainWindow(QMainWindow):
 
         if index == 0:
             self._dashboard_page.refresh()
+        elif index == 1:
+            self._aufgaben_page.refresh()
         elif index == 2:
-            # Dateibaum neu laden (greift ggf. geänderte Einstellungen ab)
             self._dienstplan_page.reload_tree()
+        elif index == 3:
+            self._uebergabe_page.refresh()
+        elif index == 4:
+            self._fahrzeuge_page.refresh()

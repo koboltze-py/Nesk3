@@ -25,7 +25,7 @@ import glob
 from datetime import datetime
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QPalette, QColor
 from gui.main_window import MainWindow
 
 
@@ -72,10 +72,76 @@ def main():
     app.setOrganizationName("DRK Flughafen Köln")
     app.setStyle("Fusion")
 
-    # Globale Basisschrift: Segoe UI 10pt – die Windows-Systemschrift.
-    # Alle Widgets ohne expliziten Font erben diese Größe und skalieren
-    # damit korrekt mit der Windows-Anzeigenskalierung (100 %, 125 %, 150 % …).
-    app.setFont(QFont("Segoe UI", 10))
+    # -----------------------------------------------------------------------
+    # FONT – plattformunabhängig, identisch auf allen PCs / EXE-Installationen
+    # Schrift-Priorität: Segoe UI (Windows) → Arial → Helvetica Neue → OS-default
+    # -----------------------------------------------------------------------
+    app_font = QFont()
+    app_font.setFamilies(["Segoe UI", "Arial", "Helvetica Neue"])
+    app_font.setPointSize(10)
+    app_font.setStyleHint(QFont.StyleHint.SansSerif)
+    app.setFont(app_font)
+
+    # -----------------------------------------------------------------------
+    # PALETTE – Textfarbe explizit SCHWARZ; kein Einfluss von Dark Mode /
+    # Windows-Theme / High-Contrast-Modus möglich.
+    # -----------------------------------------------------------------------
+    BLACK    = QColor("#000000")
+    WHITE    = QColor("#FFFFFF")
+    BG       = QColor("#F5F5F5")   # Fensterhintergrund
+    BASE     = QColor("#FFFFFF")   # Eingabefelder, Listen
+    ALT      = QColor("#EAEAEA")   # Alternating rows
+    BTN      = QColor("#E0E0E0")   # Schaltflächen
+    DISABLED = QColor("#A0A0A0")   # Inaktive Elemente
+    HILIGHT  = QColor("#0078D4")   # Auswahl / Fokus (DRK-Blau)
+    HI_TEXT  = QColor("#FFFFFF")   # Text auf Auswahl
+
+    pal = QPalette()
+    # Aktiv & Inaktiv – gleiche Farben (kein "graues Fenster im Hintergrund")
+    for grp in (QPalette.ColorGroup.Active,
+                QPalette.ColorGroup.Inactive,
+                QPalette.ColorGroup.Normal):
+        pal.setColor(grp, QPalette.ColorRole.Window,          BG)
+        pal.setColor(grp, QPalette.ColorRole.WindowText,      BLACK)
+        pal.setColor(grp, QPalette.ColorRole.Base,            BASE)
+        pal.setColor(grp, QPalette.ColorRole.AlternateBase,   ALT)
+        pal.setColor(grp, QPalette.ColorRole.Text,            BLACK)
+        pal.setColor(grp, QPalette.ColorRole.BrightText,      BLACK)
+        pal.setColor(grp, QPalette.ColorRole.ButtonText,      BLACK)
+        pal.setColor(grp, QPalette.ColorRole.Button,          BTN)
+        pal.setColor(grp, QPalette.ColorRole.Highlight,       HILIGHT)
+        pal.setColor(grp, QPalette.ColorRole.HighlightedText, HI_TEXT)
+        pal.setColor(grp, QPalette.ColorRole.ToolTipBase,     QColor("#FFFFC4"))
+        pal.setColor(grp, QPalette.ColorRole.ToolTipText,     BLACK)
+        pal.setColor(grp, QPalette.ColorRole.PlaceholderText, QColor("#808080"))
+        pal.setColor(grp, QPalette.ColorRole.Link,            QColor("#0078D4"))
+        pal.setColor(grp, QPalette.ColorRole.LinkVisited,     QColor("#5C2D91"))
+    # Disabled
+    pal.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.WindowText, DISABLED)
+    pal.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text,       DISABLED)
+    pal.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.ButtonText, DISABLED)
+    pal.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Base,       QColor("#F0F0F0"))
+    app.setPalette(pal)
+
+    # -----------------------------------------------------------------------
+    # GLOBAL STYLESHEET – Font-Familie und Schriftgröße für alle QWidgets,
+    # die kein eigenes Stylesheet haben. Farbe wird durch die Palette geregelt;
+    # explizite widget-eigene Stylesheets (z.B. "color: white" in der Sidebar)
+    # haben höhere Spezifizität und überschreiben diesen Basis-Style problemlos.
+    # -----------------------------------------------------------------------
+    app.setStyleSheet("""
+        QWidget {
+            font-family: 'Segoe UI', Arial, 'Helvetica Neue', sans-serif;
+            font-size: 10pt;
+            color: #000000;
+        }
+        QToolTip {
+            color: #000000;
+            background-color: #FFFFC4;
+            border: 1px solid #C0C0C0;
+            font-size: 9pt;
+        }
+    """)
 
     # DB-Backup vor Programmstart
     _db_startup_backup()

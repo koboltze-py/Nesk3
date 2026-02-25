@@ -15,6 +15,50 @@ from collections import Counter
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
+def _runde_auf_volle_stunde(zeit_str: Optional[str]) -> Optional[str]:
+    """
+    Rundet eine Zeitangabe auf die volle Stunde ab (Minutenanteil wird 0).
+    '07:15' -> '07:00'   '19:45' -> '19:00'   '06:00' -> '06:00'
+    Gibt None oder den Original-String zurück wenn nicht parsbar.
+    """
+    if not zeit_str:
+        return zeit_str
+    try:
+        teile = zeit_str.split(':')
+        stunde = int(teile[0])
+        return f'{stunde:02d}:00'
+    except Exception:
+        return zeit_str
+
+
+def _betr_zu_dispo_kuerzel(kuerzel: str) -> str:
+    """
+    Wandelt ein Betreuer-Dienstkürzel in das entsprechende Dispo-Kürzel um.
+    Wird verwendet wenn ein Mitarbeiter im Dispo-Abschnitt als krank gemeldet ist.
+
+      T    → DT      T10  → DT      T8   → DT
+      T(?) → DT(?)
+      N    → DN      N10  → DN
+      N(?) → DN(?)   S(?) → DN3(?)
+    """
+    mapping = {
+        'T':    'DT',
+        'T10':  'DT',
+        'T8':   'DT',
+        'N':    'DN',
+        'N10':  'DN',
+    }
+    if kuerzel in mapping:
+        return mapping[kuerzel]
+    if kuerzel.startswith('T'):
+        return kuerzel.replace('T', 'DT', 1)
+    if kuerzel.startswith('N'):
+        return kuerzel.replace('N', 'DN', 1)
+    if kuerzel.startswith('S'):
+        return 'DN3(?)'
+    return kuerzel or 'D(?)'
+
+
 class DienstplanParser:
     """Parser für Dienstplan-Excel-Dateien.
     Sucht die Header-Zeile (NAME, DIENST, BEGINN, ENDE) automatisch
@@ -74,9 +118,33 @@ class DienstplanParser:
             kranke_liste   = []
             alle_nachnamen = []
 
+            # Abschnitt-Tracking: 'betreuer' oder 'dispo'
+            aktueller_abschnitt = 'betreuer'
+
             for row in self.sheet.iter_rows(min_row=1, values_only=False):
-                person = self._parse_row(row)
+                row_list = list(row)
+
+                # Abschnitts-Header prüfen BEVOR _parse_row aufgerufen wird
+                neuer_abschnitt = self._detect_abschnitt_header(row_list)
+                if neuer_abschnitt is not None:
+                    aktueller_abschnitt = neuer_abschnitt
+                    continue   # Header-Zeile selbst nicht als Person parsen
+
+                person = self._parse_row(row_list)
                 if person:
+                    # Abschnitts-Kontext auf Person übertragen
+                    if aktueller_abschnitt == 'dispo':
+                        person['ist_dispo']       = True
+                        # Für Kranke: Dispo-Status + abgeleitetes Kürzel anpassen
+                        if person.get('ist_krank'):
+                            person['krank_ist_dispo'] = True
+                            # Betreuer-Kürzel → Dispo-Kürzel umwandeln
+                            d = person.get('krank_abgeleiteter_dienst') or ''
+                            person['krank_abgeleiteter_dienst'] = _betr_zu_dispo_kuerzel(d)
+                            # Anzeigezeiten auf volle Stunde abrunden
+                            person['start_zeit'] = _runde_auf_volle_stunde(person.get('start_zeit'))
+                            person['end_zeit']   = _runde_auf_volle_stunde(person.get('end_zeit'))
+
                     alle_nachnamen.append(person['nachname'])
                     if person['ist_krank']:
                         kranke_liste.append(person)
@@ -193,6 +261,40 @@ class DienstplanParser:
                 }
         return None
 
+    def _detect_abschnitt_header(self, row_list: list) -> Optional[str]:
+        """
+        Erkennt Abschnitts-Trennzeilen in der Excel-Datei.
+        Gibt 'dispo', 'betreuer' oder None (kein Header) zurück.
+
+        Bekannte Header-Muster:
+          '[Stamm FH]'  / 'Stamm ...'  → 'betreuer'
+          'Dispo'                      → 'dispo'
+        """
+        cells = [cell.value if hasattr(cell, 'value') else cell for cell in row_list]
+
+        # Nur nicht-leere String-Werte betrachten
+        texte = [
+            str(c).strip().lower()
+            for c in cells
+            if c is not None and isinstance(c, str) and str(c).strip()
+        ]
+        if not texte:
+            return None
+
+        # Wenn Namens-Spalte befüllt ist, ist es eine normale Datenzeile → kein Header
+        if self.column_map and self.column_map.get('name') is not None:
+            name_idx = self.column_map['name']
+            if name_idx < len(cells) and cells[name_idx] and \
+               isinstance(cells[name_idx], str) and cells[name_idx].strip():
+                return None
+
+        for t in texte:
+            if t.startswith('dispo'):
+                return 'dispo'
+            if 'stamm' in t or 'betreuer' in t or '[stamm' in t:
+                return 'betreuer'
+        return None
+
     def _parse_row(self, row) -> Optional[dict]:
         """Parst eine Zeile und gibt Person-Dict oder None zurück."""
         row_list    = list(row)
@@ -255,22 +357,33 @@ class DienstplanParser:
 
         schicht_typ = self._ermittle_schichttyp(start_zeit, end_zeit)
 
+        # Für kranke Mitarbeiter: Schichttyp und Dispo-Status aus Zeiten ableiten
+        krank_schicht_typ       = None
+        krank_ist_dispo         = False
+        krank_abgeleiteter_dienst = None
+        if ist_krank:
+            krank_schicht_typ, krank_ist_dispo, krank_abgeleiteter_dienst = \
+                self._ermittle_krank_typ(start_zeit, end_zeit, full_name)
+
         return {
-            'vorname':          parsed_name['vorname'],
-            'nachname':         parsed_name['nachname'],
-            'vollname':         full_name,
-            'anzeigename':      parsed_name['nachname'],
-            'dienst_kategorie': dienst_kategorie,
-            'start_zeit':       start_zeit,
-            'end_zeit':         end_zeit,
-            'schicht_typ':      schicht_typ,
-            'ist_dispo':        dienst_kategorie in self.DISPO_KATEGORIEN if dienst_kategorie else False,
-            'ist_krank':        ist_krank,
-            'ist_bulmorfahrer': ist_bulmorfahrer,
-            'zeilen_farbe':     zeilen_farbe,
-            'dienst_farbe':     dienst_farbe,
-            'dienst_farbe_hex': dienst_farbe_hex,
-            'excel_row':        excel_row,
+            'vorname':                  parsed_name['vorname'],
+            'nachname':                 parsed_name['nachname'],
+            'vollname':                 full_name,
+            'anzeigename':              parsed_name['nachname'],
+            'dienst_kategorie':         dienst_kategorie,
+            'start_zeit':               start_zeit,
+            'end_zeit':                 end_zeit,
+            'schicht_typ':              schicht_typ,
+            'ist_dispo':                dienst_kategorie in self.DISPO_KATEGORIEN if dienst_kategorie else False,
+            'ist_krank':                ist_krank,
+            'krank_schicht_typ':        krank_schicht_typ,
+            'krank_ist_dispo':          krank_ist_dispo,
+            'krank_abgeleiteter_dienst': krank_abgeleiteter_dienst,
+            'ist_bulmorfahrer':         ist_bulmorfahrer,
+            'zeilen_farbe':             zeilen_farbe,
+            'dienst_farbe':             dienst_farbe,
+            'dienst_farbe_hex':         dienst_farbe_hex,
+            'excel_row':                excel_row,
         }
 
     def _check_cell_colors(self, name_cell_obj, dienst_cell_obj):
@@ -383,6 +496,89 @@ class DienstplanParser:
         elif 0 <= hour < 5:
             return 'nachtschicht_spaet'
         return None
+
+    def _ermittle_krank_typ(
+        self,
+        start_zeit: Optional[str],
+        end_zeit:   Optional[str],
+        vollname:   str,
+    ):
+        """
+        Leitet für einen kranken Mitarbeiter ab:
+          - krank_schicht_typ  : 'tagdienst' | 'nachtdienst' | 'sonderdienst'
+          - krank_ist_dispo    : bool
+          - krank_abgeleiteter_dienst : str  (z.B. 'T', 'DT', 'N', 'DN', ...)
+
+        Bekannte Dienstzeiten (Startzeit → Dienst):
+          Tag    Betreuer : T    06:00–18:00 | T10  09:00–19:00 | T8   10:00–18:00
+          Tag    Dispo    : DT   07:00–19:00
+          Nacht  Betreuer : N    18:00–06:00 | N10  21:00–07:00
+          Nacht  Dispo    : DN   19:00–07:00 | DN3  19:00–07:00
+          Tag    Dispo*   : DT3  19:00–07:00  (* schichttechnisch Nacht, aber als Tag klassifiziert)
+          Rufbereitschaft : R    Sonderdienst
+        """
+        # Sonderfall Bauschke: immer Dispo
+        ist_dispo_by_name = 'bauschke' in vollname.lower()
+
+        if not start_zeit:
+            return 'sonderdienst', ist_dispo_by_name, None
+
+        try:
+            sh = int(start_zeit.split(':')[0])
+            sm = int(start_zeit.split(':')[1]) if ':' in start_zeit else 0
+        except Exception:
+            return 'sonderdienst', ist_dispo_by_name, None
+
+        eh = None
+        em = None
+        if end_zeit and ':' in end_zeit:
+            try:
+                eh = int(end_zeit.split(':')[0])
+                em = int(end_zeit.split(':')[1])
+            except Exception:
+                pass
+
+        # ── Exaktes Zeitmatching → Dienst-Kürzel ableiten ─────────────────────
+        abgeleitet = None
+        ist_dispo  = ist_dispo_by_name
+
+        if sh == 6 and sm == 0 and eh == 18:
+            abgeleitet = 'T';   ist_dispo = False
+        elif sh == 9 and sm == 0 and eh == 19:
+            abgeleitet = 'T10'; ist_dispo = False
+        elif sh == 10 and sm == 0 and eh == 18:
+            abgeleitet = 'T8';  ist_dispo = False
+        elif sh == 7 and sm == 0 and eh == 19:
+            abgeleitet = 'DT';  ist_dispo = True
+        elif sh == 18 and sm == 0 and eh == 6:
+            abgeleitet = 'N';   ist_dispo = False
+        elif sh == 21 and sm == 0 and eh == 7:
+            abgeleitet = 'N10'; ist_dispo = False
+        elif sh == 19 and sm == 0 and eh == 7:
+            abgeleitet = 'DN';  ist_dispo = True   # DN / DN3 / DT3 – Zeiten identisch
+        elif ist_dispo_by_name:
+            ist_dispo = True  # Bauschke: Dispo egal welche Zeit
+
+        # ── Schichttyp bestimmen (Tag = Start 05:00–14:59) ────────────────────
+        if 5 <= sh < 15:
+            schicht_typ = 'tagdienst'
+        elif 15 <= sh <= 23 or 0 <= sh < 5:
+            schicht_typ = 'nachtdienst'
+        else:
+            schicht_typ = 'sonderdienst'
+
+        # Kein exakter Treffer und keine Dispo-Erkennung → Sonderdienst
+        if abgeleitet is None and not ist_dispo_by_name:
+            # Grobe Fallback-Kennzeichnung
+            if schicht_typ == 'tagdienst':
+                abgeleitet = 'T(?)'
+            elif schicht_typ == 'nachtdienst':
+                abgeleitet = 'N(?)'
+            else:
+                abgeleitet = 'S(?)'  # Sonderdienst
+                schicht_typ = 'sonderdienst'
+
+        return schicht_typ, ist_dispo, abgeleitet
 
     def _generate_display_names(self, personen_liste: list, doppelte_nachnamen: set):
         """Hängt bei doppelten Nachnamen die ersten zwei Vorname-Buchstaben an."""

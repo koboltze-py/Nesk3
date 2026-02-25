@@ -15,6 +15,16 @@ _DEFAULTS: dict[str, str] = {
         r'Kreisverband Köln e.V\Dateien von Erste-Hilfe-Station-'
         r'Flughafen - DRK Köln e.V_ - !Gemeinsam.26\04_Tagesdienstpläne'
     ),
+    'sonderaufgaben_ordner': (
+        r'C:\Users\DRKairport\OneDrive - Deutsches Rotes Kreuz - '
+        r'Kreisverband Köln e.V\Dateien von Erste-Hilfe-Station-'
+        r'Flughafen - DRK Köln e.V_ - !Gemeinsam.26\04_Tagesdienstpläne'
+    ),
+    'aocc_datei': (
+        r'C:\Users\DRKairport\OneDrive - Deutsches Rotes Kreuz - '
+        r'Kreisverband Köln e.V\Dateien von Erste-Hilfe-Station-Flughafen - '
+        r'DRK Köln e.V_ - !Gemeinsam.26\Nesk\Nesk3\Daten\AOCC\AOCC Lagebericht.xlsm'
+    ),
 }
 
 

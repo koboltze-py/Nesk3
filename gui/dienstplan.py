@@ -138,7 +138,7 @@ class DienstplanDialog(QDialog):
 # Dienste die zum Standard gehören  -  Sonderdienste werden im Dialog angezeigt
 _STANDARD_DIENSTE = frozenset({'N', 'N10', 'T', 'T10', 'DT', 'DT3', 'DN', 'DN3'})
 
-_TAG_DIENSTE   = frozenset({'T', 'T10', 'DT', 'DT3'})
+_TAG_DIENSTE   = frozenset({'T', 'T10', 'T8', 'DT', 'DT3'})
 _NACHT_DIENSTE = frozenset({'N', 'N10', 'NF', 'DN', 'DN3'})
 
 
@@ -674,17 +674,49 @@ class _DienstplanPane(QWidget):
                 else:
                     sonst_personen.append((effekt_kat, p))
 
-        kranke_personen = [('Krank', p) for p in data.get('kranke', [])]
+        # ── Kranke Mitarbeiter nach Schichttyp + Dispo/Betreuer gruppieren ──────────
+        krank_tag_dispo    = []
+        krank_tag_betr     = []
+        krank_nacht_dispo  = []
+        krank_nacht_betr   = []
+        krank_sonder       = []
+
+        for p in data.get('kranke', []):
+            stype = p.get('krank_schicht_typ') or 'sonderdienst'
+            is_d  = p.get('krank_ist_dispo', False)
+            if stype == 'tagdienst':
+                if is_d:
+                    krank_tag_dispo.append(p)
+                else:
+                    krank_tag_betr.append(p)
+            elif stype == 'nachtdienst':
+                if is_d:
+                    krank_nacht_dispo.append(p)
+                else:
+                    krank_nacht_betr.append(p)
+            else:
+                krank_sonder.append(p)
+
+        # Krank-Abschnitte: Dispo zuerst, dann Betreuer
+        krank_tag_personen   = [('KrankDispo', p) for p in krank_tag_dispo]   + \
+                               [('Krank',      p) for p in krank_tag_betr]
+        krank_nacht_personen = [('KrankDispo', p) for p in krank_nacht_dispo] + \
+                               [('Krank',      p) for p in krank_nacht_betr]
+        krank_sonder_personen = [('Krank',     p) for p in krank_sonder]
 
         abschnitte = []
         if tag_personen:
-            abschnitte.append(('Tagdienst',   '#1565a8', '#ffffff', tag_personen))
+            abschnitte.append(('Tagdienst',         '#1565a8', '#ffffff', tag_personen))
         if nacht_personen:
-            abschnitte.append(('Nachtdienst', '#0d2b4a', '#e8eeff', nacht_personen))
+            abschnitte.append(('Nachtdienst',       '#0d2b4a', '#e8eeff', nacht_personen))
         if sonst_personen:
-            abschnitte.append(('Sonstige',    '#555555', '#ffffff', sonst_personen))
-        if kranke_personen:
-            abschnitte.append(('Krank',       '#8b0000', '#ffe8e8', kranke_personen))
+            abschnitte.append(('Sonstige',          '#555555', '#ffffff', sonst_personen))
+        if krank_tag_personen:
+            abschnitte.append(('Krank – Tagdienst',  '#8b0000', '#ffe8e8', krank_tag_personen))
+        if krank_nacht_personen:
+            abschnitte.append(('Krank – Nachtdienst','#5a0000', '#f5d0d0', krank_nacht_personen))
+        if krank_sonder_personen:
+            abschnitte.append(('Krank – Sonderdienst','#6b3300', '#fdebd0', krank_sonder_personen))
 
         total_rows = sum(1 + len(personen) for _, _, _, personen in abschnitte)
         self._table.clearSpans()
@@ -693,14 +725,16 @@ class _DienstplanPane(QWidget):
         farben = {
             'Dispo':           QColor('#dce8f5'),
             'Betreuer':        QColor('#ffffff'),
-            'Stationsleitung': QColor('#fff8e1'),   # zartes Gelb
+            'Stationsleitung': QColor('#fff8e1'),
             'Krank':           QColor('#fce8e8'),
+            'KrankDispo':      QColor('#f0d0d0'),   # Dispo-Krank: etwas dunkler
         }
         text_farben = {
             'Dispo':           QColor('#0a5ba4'),
             'Betreuer':        QColor('#1a1a1a'),
-            'Stationsleitung': QColor('#7a5000'),   # dunkelbraun
+            'Stationsleitung': QColor('#7a5000'),
             'Krank':           QColor('#bb0000'),
+            'KrankDispo':      QColor('#7a0000'),   # dunkler Rotton für Dispo-Krank
         }
 
         self._table_row_data = []
@@ -722,10 +756,25 @@ class _DienstplanPane(QWidget):
                 self._table_row_data.append(p)
                 bg = farben.get(kategorie, QColor('#ffffff'))
                 fg = text_farben.get(kategorie, QColor('#1a1a1a'))
+
+                # Spalte 0: Kategorie-Anzeige (für Krank: Dispo/Betreuer)
+                if kategorie == 'KrankDispo':
+                    kat_anzeige = 'Dispo'
+                elif kategorie == 'Krank':
+                    kat_anzeige = 'Betreuer'
+                else:
+                    kat_anzeige = kategorie
+
+                # Spalte 2: Dienst-Kürzel – bei Kranken den abgeleiteten Wert zeigen
+                if p.get('ist_krank'):
+                    dienst_anzeige = p.get('krank_abgeleiteter_dienst') or ''
+                else:
+                    dienst_anzeige = p.get('dienst_kategorie') or ''
+
                 vals = [
-                    kategorie,
+                    kat_anzeige,
                     p.get('anzeigename', ''),
-                    p.get('dienst_kategorie', ''),
+                    dienst_anzeige,
                     p.get('start_zeit', '') or '',
                     p.get('end_zeit',   '') or '',
                 ]
@@ -740,16 +789,65 @@ class _DienstplanPane(QWidget):
                         self._table.item(row, col).setBackground(QColor('#fff3b0'))
                 row += 1
 
-        # Zeilenanzahl nach Abschnitt aufschlüsseln
+        # ── Statuszeile ───────────────────────────────────────────────────
         tag_n   = len(tag_personen)
         nacht_n = len(nacht_personen)
         sonst_n = len(sonst_personen)
-        krank_n = len(kranke_personen)
+
+        # Tagdienst: Dispo / Betreuer trennen
+        tag_dispo_n  = sum(1 for kat, _ in tag_personen   if kat == 'Dispo')
+        tag_betr_n   = tag_n - tag_dispo_n
+
+        # Nachtdienst: Dispo / Betreuer trennen
+        nacht_dispo_n = sum(1 for kat, _ in nacht_personen if kat == 'Dispo')
+        nacht_betr_n  = nacht_n - nacht_dispo_n
+
+        # Krank-Zählung getrennt nach Dispo / Betreuer / Sonder
+        n_kd_tag   = len(krank_tag_dispo)
+        n_kb_tag   = len(krank_tag_betr)
+        n_kd_nacht = len(krank_nacht_dispo)
+        n_kb_nacht = len(krank_nacht_betr)
+        n_k_sonder = len(krank_sonder)
+        krank_gesamt = n_kd_tag + n_kb_tag + n_kd_nacht + n_kb_nacht + n_k_sonder
+
         teile = []
-        if tag_n:   teile.append(f'{tag_n} Tagdienst')
-        if nacht_n: teile.append(f'{nacht_n} Nachtdienst')
+        if tag_n:
+            tag_sub = []
+            if tag_betr_n:  tag_sub.append(f'Betreuer {tag_betr_n}')
+            if tag_dispo_n: tag_sub.append(f'Dispo {tag_dispo_n}')
+            teile.append(f'{tag_n} Tagdienst ({", ".join(tag_sub)})' if tag_sub else f'{tag_n} Tagdienst')
+        if nacht_n:
+            nacht_sub = []
+            if nacht_betr_n:  nacht_sub.append(f'Betreuer {nacht_betr_n}')
+            if nacht_dispo_n: nacht_sub.append(f'Dispo {nacht_dispo_n}')
+            teile.append(f'{nacht_n} Nachtdienst ({", ".join(nacht_sub)})' if nacht_sub else f'{nacht_n} Nachtdienst')
         if sonst_n: teile.append(f'{sonst_n} Sonstige')
-        if krank_n: teile.append(f'{krank_n} Krank')
+
+        if krank_gesamt:
+            # Betreuer-Block
+            betr_teile = []
+            if n_kb_tag:   betr_teile.append(f'{n_kb_tag} Tag')
+            if n_kb_nacht: betr_teile.append(f'{n_kb_nacht} Nacht')
+            if n_k_sonder: betr_teile.append(f'{n_k_sonder} Sonder')
+            betr_gesamt = n_kb_tag + n_kb_nacht + n_k_sonder
+
+            # Dispo-Block
+            dispo_teile = []
+            if n_kd_tag:   dispo_teile.append(f'{n_kd_tag} Tag')
+            if n_kd_nacht: dispo_teile.append(f'{n_kd_nacht} Nacht')
+            dispo_gesamt = n_kd_tag + n_kd_nacht
+
+            krank_blocks = []
+            if betr_gesamt:
+                krank_blocks.append(
+                    f'Betreuer {betr_gesamt} ({" / ".join(betr_teile)})'
+                )
+            if dispo_gesamt:
+                krank_blocks.append(
+                    f'Dispo {dispo_gesamt} ({" / ".join(dispo_teile)})'
+                )
+            teile.append(f'{krank_gesamt} Krank  –  {" | ".join(krank_blocks)}')
+
         self._row_count_lbl.setText('  |  '.join(teile) if teile else '0 Eintraege')
         self._row_count_lbl.setStyleSheet('color: #555; font-weight: bold; padding: 2px 0;')
 
