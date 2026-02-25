@@ -1,8 +1,6 @@
 Backup Data/
 Exe/
 build_tmp/
-# PostgreSQL Dokumentation
-database SQL/
 Nesk3.spec
 __pycache__/
 *.py[cod]
