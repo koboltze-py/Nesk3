@@ -43,6 +43,20 @@ NAV_ITEMS = [
     ("⚙️",  "Einstellungen", 10),
 ]
 
+NAV_TOOLTIPS = [
+    "Startseite – Statistiken und Übersicht",
+    "Tagdienst-Aufgaben, Checklisten und Code-19-Mail",
+    "Nachtdienst-Aufgaben und Code-19-Mail",
+    "Dienstplan laden, anzeigen und Hausverwaltung exportieren",
+    "Schichtprotokoll erstellen, ausfüllen und abschließen",
+    "Fahrzeugstatus, Schäden und Wartungstermine verwalten",
+    "Code-19-Protokoll führen und Uhrzeigen-Animation",
+    "Vordrucke öffnen und drucken (Ordner: Daten/Vordrucke)",
+    "Krankmeldungsformulare öffnen (Ordner: 03_Krankmeldungen)",
+    "Datensicherung erstellen und wiederherstellen",
+    "App-Einstellungen, Pfade und E-Mobby-Fahrerliste",
+]
+
 
 class SidebarButton(QPushButton):
     def __init__(self, icon: str, text: str, parent=None):
@@ -149,8 +163,9 @@ class MainWindow(QMainWindow):
         layout.addSpacing(8)
 
         # Navigations-Buttons
-        for icon, label, idx in NAV_ITEMS:
+        for (icon, label, idx), tooltip in zip(NAV_ITEMS, NAV_TOOLTIPS):
             btn = SidebarButton(icon, label)
+            btn.setToolTip(tooltip)
             btn.clicked.connect(lambda _, i=idx: self._navigate(i))
             self._nav_buttons.append(btn)
             layout.addWidget(btn)

@@ -505,6 +505,7 @@ class _DienstplanPane(QWidget):
 
         self._export_btn = QPushButton('Fuer Export auswaehlen')
         self._export_btn.setFixedHeight(22)
+        self._export_btn.setToolTip('Diesen Dienstplan-Tab für den Stundenlisten-Export auswählen')
         self._export_btn.setStyleSheet(
             'font-size: 10px; padding: 0 6px; border-radius: 3px; '
             f'background: {FIORI_BLUE}; color: white; border: none;'
@@ -1057,6 +1058,7 @@ class DienstplanWidget(QWidget):
 
         word_btn = QPushButton("Word exportieren")
         word_btn.setMinimumHeight(36)
+        word_btn.setToolTip("Stärkemeldung als Word-Dokument exportieren und öffnen")
         word_btn.setStyleSheet(
             f"background-color: {FIORI_BLUE}; color: white; "
             f"border-radius: 4px; padding: 0 12px;"

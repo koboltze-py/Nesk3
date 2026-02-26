@@ -194,6 +194,7 @@ class UebergabeWidget(QWidget):
             "border-radius:4px;padding:2px 14px;font-weight:bold;}"
             "QPushButton:hover{background:#e8eaf0;}"
         )
+        btn_refresh.setToolTip("Liste der Protokolle neu laden")
         btn_refresh.clicked.connect(self.refresh)
         layout.addWidget(btn_refresh)
 
@@ -213,6 +214,7 @@ class UebergabeWidget(QWidget):
             }}
             QPushButton:hover {{ background-color: #e08010; }}
         """)
+        btn_tag.setToolTip("Neues Tagdienst-Protokoll erstellen (07:00 – 19:00)")
         btn_tag.clicked.connect(lambda: self._neues_protokoll("tagdienst"))
 
         # Neues Nachtdienst-Protokoll
@@ -231,6 +233,7 @@ class UebergabeWidget(QWidget):
             }}
             QPushButton:hover {{ background-color: #3d566e; }}
         """)
+        btn_nacht.setToolTip("Neues Nachtdienst-Protokoll erstellen (19:00 – 07:00)")
         btn_nacht.clicked.connect(lambda: self._neues_protokoll("nachtdienst"))
 
         layout.addWidget(btn_tag)
@@ -258,6 +261,7 @@ class UebergabeWidget(QWidget):
             "QPushButton{background:#fff;border:1px solid #bbb;border-radius:4px;font-size:11px;}"
             "QPushButton:hover{background:#d0d4e8;}"
         )
+        self._btn_nav_prev.setToolTip("Vorherigen Monat anzeigen")
         self._btn_nav_prev.clicked.connect(self._nav_prev_monat)
         self._lbl_nav_monat = QLabel()
         self._lbl_nav_monat.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -269,6 +273,7 @@ class UebergabeWidget(QWidget):
             "QPushButton{background:#fff;border:1px solid #bbb;border-radius:4px;font-size:11px;}"
             "QPushButton:hover{background:#d0d4e8;}"
         )
+        self._btn_nav_next.setToolTip("Nächsten Monat anzeigen")
         self._btn_nav_next.clicked.connect(self._nav_next_monat)
         nl.addWidget(self._btn_nav_prev)
         nl.addWidget(self._lbl_nav_monat, 1)
@@ -285,6 +290,7 @@ class UebergabeWidget(QWidget):
         self._filter_combo = QComboBox()
         self._filter_combo.addItems(["Alle", "Tagdienst", "Nachtdienst"])
         self._filter_combo.setStyleSheet("background: white; border: 1px solid #ccc; border-radius: 3px; padding: 2px 6px;")
+        self._filter_combo.setToolTip("Protokolle nach Schichttyp filtern")
         self._filter_combo.currentIndexChanged.connect(self._lade_liste)
         fl.addWidget(QLabel("Anzeigen:"))
         fl.addWidget(self._filter_combo, 1)
@@ -304,6 +310,10 @@ class UebergabeWidget(QWidget):
         self._ue_search.setStyleSheet(
             "background:white; border:1px solid #ccc; border-radius:3px;"
             "padding:3px 8px; font-size:11px;"
+        )
+        self._ue_search.setToolTip(
+            "Protokollliste filtern \u2013 sucht in Datum, Ersteller und Schichttyp.\n"
+            "Beispiel: \"12.02\" zeigt alle Protokolle vom 12. Februar."
         )
         self._ue_search.textChanged.connect(self._apply_protokoll_filter)
         sl.addWidget(suche_icon)

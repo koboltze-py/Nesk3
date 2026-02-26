@@ -404,6 +404,7 @@ class FahrzeugeWidget(QWidget):
         btn.setFixedHeight(40)
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
         btn.setStyleSheet(_btn_style(FIORI_BLUE, "#0855a9"))
+        btn.setToolTip("Neues Fahrzeug in der Datenbank anlegen")
         btn.clicked.connect(self._fahrzeug_anlegen)
         layout.addWidget(btn)
         return h
@@ -432,6 +433,14 @@ class FahrzeugeWidget(QWidget):
             "background:white; border:1px solid #ccc; border-radius:3px;"
             "padding:4px 8px; font-size:11px;"
         )
+        self._fz_search.setToolTip(
+            "Fahrzeuge filtern \u2013 Suchbegriff eingeben und Filterkategorie wählen.\n"
+            "Alle: Kennzeichen + Status + Schäden + Termine\n"
+            "Status: nur nach aktuellem Fahrzeugstatus\n"
+            "Schäden: in Schadenbeschreibungen suchen\n"
+            "Termine: in Wartungs-/TÜV-Terminen suchen\n"
+            "Historie: in der vollständigen Statushistorie suchen"
+        )
         self._fz_search.textChanged.connect(self._apply_fahrzeug_filter)
 
         filter_row = QHBoxLayout()
@@ -443,6 +452,7 @@ class FahrzeugeWidget(QWidget):
             "background:white; border:1px solid #ccc; border-radius:3px;"
             "padding:2px 4px; font-size:10px;"
         )
+        self._fz_filter_combo.setToolTip("Suchbereich einschränken: Status / Schäden / Termine / Historie")
         self._fz_filter_combo.currentIndexChanged.connect(self._apply_fahrzeug_filter)
         filter_row.addWidget(filter_lbl)
         filter_row.addWidget(self._fz_filter_combo, 1)
@@ -660,11 +670,13 @@ class FahrzeugeWidget(QWidget):
         btn_edit.setStyleSheet(_btn_style(FIORI_BLUE, "#0855a9"))
         btn_edit.setFixedHeight(34)
         btn_edit.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_edit.setToolTip("Fahrzeugdaten bearbeiten (Kennzeichen, Typ, TÜV-Datum ...)") 
         btn_edit.clicked.connect(lambda: self._fahrzeug_bearbeiten(fid))
 
         btn_del = QPushButton("🗑")
         btn_del.setFixedSize(34, 34)
         btn_del.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_del.setToolTip("Dieses Fahrzeug dauerhaft aus der Datenbank löschen")
         btn_del.setStyleSheet("QPushButton{background:#eee;border:none;border-radius:4px;}"
                               "QPushButton:hover{background:#ffcccc;color:#a00;}")
         btn_del.clicked.connect(lambda: self._fahrzeug_loeschen(fid))
@@ -752,6 +764,7 @@ class FahrzeugeWidget(QWidget):
         btn_change = QPushButton("Status ändern")
         btn_change.setFixedHeight(36)
         btn_change.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_change.setToolTip("Neuen Status setzen (fahrbereit, defekt, Werkstatt, außer Dienst ...)")
         btn_change.setStyleSheet(_btn_style(meta["color"], meta["color"]))
         btn_change.clicked.connect(lambda: self._status_aendern(fid))
         kl.addWidget(btn_change)
@@ -788,6 +801,7 @@ class FahrzeugeWidget(QWidget):
         btn_del = QPushButton("Markierten Eintrag löschen")
         btn_del.setFixedHeight(32)
         btn_del.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_del.setToolTip("Ausgewählten Status-Historieneintrag aus der Datenbank entfernen")
         btn_del.setStyleSheet("QPushButton{background:#eee;border:none;border-radius:4px;padding:4px 12px;}"
                               "QPushButton:hover{background:#ffcccc;color:#a00;}")
         def _del_status():
@@ -874,6 +888,7 @@ class FahrzeugeWidget(QWidget):
         btn_mark = QPushButton("✓  Als behoben markieren")
         btn_mark.setFixedHeight(32)
         btn_mark.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_mark.setToolTip("Markierten Schaden als behoben kennzeichnen und Datum setzen")
         btn_mark.setStyleSheet(_btn_style(FIORI_SUCCESS, "#0d6831"))
         def _mark_behoben():
             row = table.currentRow()
@@ -886,6 +901,7 @@ class FahrzeugeWidget(QWidget):
         btn_edit = QPushButton("✏  Bearbeiten")
         btn_edit.setFixedHeight(32)
         btn_edit.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_edit.setToolTip("Schadensmeldung bearbeiten (Beschreibung, Schwere, Kommentar)")
         btn_edit.setStyleSheet(_btn_style(FIORI_BLUE, "#0855a9"))
         def _edit_schaden():
             row = table.currentRow()
@@ -902,6 +918,7 @@ class FahrzeugeWidget(QWidget):
         btn_del = QPushButton("🗑  Löschen")
         btn_del.setFixedHeight(32)
         btn_del.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_del.setToolTip("Schadensmeldung dauerhaft aus der Datenbank löschen")
         btn_del.setStyleSheet("QPushButton{background:#eee;border:none;border-radius:4px;padding:4px 10px;}"
                               "QPushButton:hover{background:#ffcccc;color:#a00;}")
         def _del_schaden():
@@ -964,6 +981,7 @@ class FahrzeugeWidget(QWidget):
         btn_mark = QPushButton("✓  Als erledigt markieren")
         btn_mark.setFixedHeight(32)
         btn_mark.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_mark.setToolTip("Markierten Termin als erledigt kennzeichnen")
         btn_mark.setStyleSheet(_btn_style(FIORI_SUCCESS, "#0d6831"))
         def _mark_erledigt():
             row = table.currentRow()
@@ -975,6 +993,7 @@ class FahrzeugeWidget(QWidget):
         btn_edit = QPushButton("✏  Bearbeiten")
         btn_edit.setFixedHeight(32)
         btn_edit.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_edit.setToolTip("Termin bearbeiten (Datum, Typ, Titel, Uhrzeit, Kommentar)")
         btn_edit.setStyleSheet(_btn_style(FIORI_BLUE, "#0855a9"))
         def _edit_termin():
             row = table.currentRow()
@@ -992,6 +1011,7 @@ class FahrzeugeWidget(QWidget):
         btn_del = QPushButton("🗑  Löschen")
         btn_del.setFixedHeight(32)
         btn_del.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_del.setToolTip("Termin dauerhaft aus der Datenbank löschen")
         btn_del.setStyleSheet("QPushButton{background:#eee;border:none;border-radius:4px;padding:4px 10px;}"
                               "QPushButton:hover{background:#ffcccc;color:#a00;}")
         def _del_termin():

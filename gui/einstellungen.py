@@ -77,6 +77,7 @@ class EinstellungenWidget(QWidget):
 
         browse_btn = QPushButton("📂 Durchsuchen")
         browse_btn.setMinimumHeight(32)
+        browse_btn.setToolTip("Ordner für Dienstplan-Excel-Dateien auswählen")
         browse_btn.clicked.connect(self._browse_ordner)
         ordner_row.addWidget(browse_btn)
 
@@ -127,6 +128,7 @@ class EinstellungenWidget(QWidget):
 
         sa_browse_btn = QPushButton("📂 Durchsuchen")
         sa_browse_btn.setMinimumHeight(32)
+        sa_browse_btn.setToolTip("Ordner für Sonderaufgaben-Dateien auswählen")
         sa_browse_btn.clicked.connect(self._browse_sa_ordner)
         sa_row.addWidget(sa_browse_btn)
 
@@ -177,6 +179,7 @@ class EinstellungenWidget(QWidget):
 
         aocc_browse_btn = QPushButton("📂 Durchsuchen")
         aocc_browse_btn.setMinimumHeight(32)
+        aocc_browse_btn.setToolTip("AOCC Lagebericht Excel-Datei (.xlsm) auswählen")
         aocc_browse_btn.clicked.connect(self._browse_aocc)
         aocc_row.addWidget(aocc_browse_btn)
 
@@ -227,6 +230,7 @@ class EinstellungenWidget(QWidget):
 
         c19_browse_btn = QPushButton("📂 Durchsuchen")
         c19_browse_btn.setMinimumHeight(32)
+        c19_browse_btn.setToolTip("Code-19-Excel-Datei (.xlsx) auswählen")
         c19_browse_btn.clicked.connect(self._browse_c19)
         c19_row.addWidget(c19_browse_btn)
 
@@ -286,6 +290,7 @@ class EinstellungenWidget(QWidget):
 
         emobby_add_btn = QPushButton("+ Hinzufügen")
         emobby_add_btn.setMinimumHeight(32)
+        emobby_add_btn.setToolTip("Eingegebenen Nachnamen zur E-Mobby-Fahrerliste hinzufügen")
         emobby_add_btn.setStyleSheet(
             f"background-color: #107e3e; color: white; border: none; "
             f"border-radius: 3px; padding: 4px 12px; font-weight: bold;"
@@ -295,6 +300,7 @@ class EinstellungenWidget(QWidget):
 
         emobby_remove_btn = QPushButton("🗑 Entfernen")
         emobby_remove_btn.setMinimumHeight(32)
+        emobby_remove_btn.setToolTip("Ausgewählten Eintrag aus der E-Mobby-Liste entfernen")
         emobby_remove_btn.setStyleSheet(
             "background-color: #e0e0e0; color: #555; border: none; "
             "border-radius: 3px; padding: 4px 12px;"
@@ -326,6 +332,7 @@ class EinstellungenWidget(QWidget):
         self._proto_filter.setFixedWidth(180)
         proto_load_btn = QPushButton("🔄 Laden")
         proto_load_btn.setFixedWidth(90)
+        proto_load_btn.setToolTip("Protokollliste nach gewähltem Filter neu laden")
         proto_load_btn.clicked.connect(self._load_protokoll_liste)
         proto_filter_row.addWidget(QLabel("Filter:"))
         proto_filter_row.addWidget(self._proto_filter)
@@ -347,6 +354,7 @@ class EinstellungenWidget(QWidget):
         proto_btn_row = QHBoxLayout()
         proto_del_btn = QPushButton("🗑 Löschen")
         proto_del_btn.setFixedHeight(34)
+        proto_del_btn.setToolTip("Ausgewählte Protokolle dauerhaft löschen (Passwortschutz)")
         proto_del_btn.setStyleSheet(
             "QPushButton{background:#c0392b;color:white;border-radius:4px;font-weight:bold;}"
             "QPushButton:hover{background:#e74c3c;}"
@@ -354,8 +362,8 @@ class EinstellungenWidget(QWidget):
         proto_del_btn.clicked.connect(self._loeschen_protokolle_bulk)
         proto_arch_btn = QPushButton("📦 Archivieren")
         proto_arch_btn.setFixedHeight(34)
+        proto_arch_btn.setToolTip("Ausgewählte Protokolle ins Archiv verschieben (Passwortschutz)")
         proto_arch_btn.setStyleSheet(
-            "QPushButton{background:#7f8c8d;color:white;border-radius:4px;font-weight:bold;}"
             "QPushButton:hover{background:#95a5a6;}"
         )
         proto_arch_btn.clicked.connect(self._archivieren_protokolle_bulk)
@@ -391,6 +399,7 @@ class EinstellungenWidget(QWidget):
         arch_browse_btn = QPushButton("📂 Durchsuchen")
         arch_browse_btn.setFixedWidth(110)
         arch_browse_btn.setFixedHeight(28)
+        arch_browse_btn.setToolTip("Archiv-Datenbankdatei auswählen oder neu anlegen")
         arch_browse_btn.setStyleSheet(
             "QPushButton{background:#eef4fa;border:1px solid #b0c8e8;"
             "border-radius:4px;padding:2px 8px;color:#0a6ed1;font-size:11px;}"
@@ -417,6 +426,7 @@ class EinstellungenWidget(QWidget):
         self._archiv_filter.setFixedWidth(180)
         arch_load_btn = QPushButton("🔄 Archiv laden")
         arch_load_btn.setFixedWidth(110)
+        arch_load_btn.setToolTip("Archivierte Protokolle nach gewähltem Filter anzeigen")
         arch_load_btn.clicked.connect(self._load_archiv_liste)
         archiv_filter_row.addWidget(QLabel("Filter:"))
         archiv_filter_row.addWidget(self._archiv_filter)
@@ -438,13 +448,14 @@ class EinstellungenWidget(QWidget):
         archiv_btn_row = QHBoxLayout()
         arch_detail_btn = QPushButton("🔍 Details")
         arch_detail_btn.setFixedHeight(34)
+        arch_detail_btn.setToolTip("Inhalt des ausgewählten archivierten Protokolls anzeigen")
         arch_detail_btn.setStyleSheet(
-            "QPushButton{background:#2980b9;color:white;border-radius:4px;font-weight:bold;}"
             "QPushButton:hover{background:#3498db;}"
         )
         arch_detail_btn.clicked.connect(self._archiv_details_popup)
         arch_restore_btn = QPushButton("↩ Wiederherstellen")
         arch_restore_btn.setFixedHeight(34)
+        arch_restore_btn.setToolTip("Ausgewählte Protokolle aus dem Archiv in die Hauptdatenbank zurückverschieben")
         arch_restore_btn.setStyleSheet(
             "QPushButton{background:#27ae60;color:white;border-radius:4px;font-weight:bold;}"
             "QPushButton:hover{background:#2ecc71;}"

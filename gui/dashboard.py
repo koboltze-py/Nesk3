@@ -220,9 +220,13 @@ class DashboardWidget(QWidget):
 
         # Statistik-Karten
         self._card_aktive  = StatCard("Aktive Mitarbeiter",     "–", "👥", FIORI_BLUE)
+        self._card_aktive.setToolTip("Anzahl der Mitarbeiter mit Status 'aktiv' in der Datenbank")
         self._card_gesamt  = StatCard("Mitarbeiter gesamt",     "–", "🗂️",  "#555")
+        self._card_gesamt.setToolTip("Gesamtanzahl aller Mitarbeiter (aktiv + inaktiv)")
         self._card_heute   = StatCard("Schichten heute",        "–", "📅", FIORI_SUCCESS)
+        self._card_heute.setToolTip("Anzahl der Schichten, die für den heutigen Tag eingetragen sind")
         self._card_monat   = StatCard("Schichten diesen Monat", "–", "📊", FIORI_WARNING)
+        self._card_monat.setToolTip("Anzahl aller Schichten im aktuellen Kalendermonat")
 
         grid = QGridLayout()
         grid.setSpacing(16)
@@ -234,6 +238,7 @@ class DashboardWidget(QWidget):
 
         # Animiertes Flugzeug-Widget
         self._flugzeug = FlugzeugWidget()
+        self._flugzeug.setToolTip("Klicken für eine wichtige Durchsage vom Flughafen Köln/Bonn ✈")
         layout.addWidget(self._flugzeug)
 
         # DB-Statusanzeige
