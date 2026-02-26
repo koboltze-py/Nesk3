@@ -199,6 +199,21 @@ class MitarbeiterWidget(QWidget):
         btn_row.addWidget(self._row_count_lbl)
         layout.addLayout(btn_row)
 
+        ausschluss_info = QLabel(
+            "ℹ️  <b>Export-Spalte (✅/🚫)</b>: Zeigt, ob ein Mitarbeiter in der "
+            "<b>Stärkemeldungs-Word-Datei</b> erscheint. Mit \'🚫 Ausschließen\' "
+            "kann das für einzelne Personen deaktiviert werden – z. B. bei "
+            "Langzeiturlaub oder Freistellung. Der Mitarbeiter bleibt weiterhin "
+            "in der Datenbank und ist nicht gelöscht."
+        )
+        ausschluss_info.setWordWrap(True)
+        ausschluss_info.setTextFormat(Qt.TextFormat.RichText)
+        ausschluss_info.setStyleSheet(
+            "background: #fff8e8; border: 1px solid #f0d080; border-radius: 5px; "
+            "padding: 7px 12px; color: #5a3e00; font-size: 11px;"
+        )
+        layout.addWidget(ausschluss_info)
+
     def refresh(self):
         """Lädt alle Mitarbeiter aus der DB."""
         # TODO: Implementierung folgt

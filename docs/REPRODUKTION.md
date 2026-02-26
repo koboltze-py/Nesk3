@@ -1,6 +1,6 @@
 # Nesk3 – Reproduktionsprotokoll
 
-**Stand:** 26.02.2026  
+**Stand:** 26.02.2026 – v2.9.4  
 **Ziel:** Vollständige Neuerstellung der Nesk3-Anwendung auf einem neuen System
 
 ---
@@ -497,3 +497,26 @@ python3.13 main.py
 - [ ] App starten → DB wird automatisch erstellt
 - [ ] Einstellungen öffnen → Pfade zu Dienstplan-Excel, Sonderaufgaben, AOCC, Code-19 eintragen
 - [ ] Dienstplan laden → ersten Dienstplan importieren
+
+---
+
+## 13. EXE erstellen (PyInstaller)
+
+```powershell
+cd "...\Nesk\Nesk3"
+python3.13 -m PyInstaller Nesk3.spec
+```
+
+Die `Nesk3.spec` ist bereits konfiguriert mit:
+- `icon = 'Daten/Logo/nesk3.ico'`
+- `datas`: alle `Daten/`-Ordner
+- `upx = False` (verhindert Antivirus-Fehlalarme)
+- Ausgabe: `dist/Nesk3.exe` (~69 MB)
+
+### Backup erstellen (vor EXE-Build empfohlen)
+```python
+from backup.backup_manager import create_zip_backup
+zip_pfad = create_zip_backup()
+print(f"Backup: {zip_pfad}")
+```
+Ausgeschlossen: `Backup Data/`, `build_tmp/`, `Exe/`, `__pycache__/`, `dist/` → Größe ~8 MB

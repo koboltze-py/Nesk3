@@ -267,7 +267,9 @@ class EinstellungenWidget(QWidget):
 
         emobby_desc = QLabel(
             "Namen der Mitarbeiter, die E-Mobby fahren dürfen.\n"
-            "Beim Laden des Dienstplans werden diese automatisch erkannt."
+            "Beim Laden des Dienstplans werden diese automatisch erkannt und in der "
+            "Übergabe-Ansicht unter Fahrzeuge als E-Mobby-Fahrer markiert. "
+            "Nur Nachnamen eintragen – Groß-/Kleinschreibung wird ignoriert."
         )
         emobby_desc.setWordWrap(True)
         emobby_desc.setStyleSheet("color: #555; font-size: 11px; font-weight: normal;")

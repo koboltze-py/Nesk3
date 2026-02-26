@@ -5,6 +5,84 @@ Format: `[Datum] Beschreibung – betroffene Dateien`
 
 ---
 
+## 26.02.2026 – v2.9.4
+
+### Erklär-Boxen und Tooltips in der gesamten App
+
+#### Mitarbeiter: Export-Info-Box
+- **`gui/mitarbeiter.py`**
+  - Gelbe Info-Box unter den Aktions-Buttons erklärt den Unterschied zwischen „ausschließen" (kein Export) und „löschen"
+  - Text: „Export-Spalte (✅/🚫): Zeigt ob Mitarbeiter in Stärkemeldungs-Word erscheint – bleibt in der Datenbank"
+
+#### Aufgaben Tag – Code 19: Zeitraum-Info-Box
+- **`gui/aufgaben_tag.py`**
+  - Blaue Info-Box im Zeitraum-Abschnitt erklärt welche Excel-Zeilen ausgelesen werden
+  - Text: „Zeitraum: Legt fest welche Dienstplaneinträge aus der Excel in die E-Mail übernommen werden. Standard: letzte 7 Tage bis heute."
+
+#### Übergabe: Button-Tooltips + Abschluss-Info-Box
+- **`gui/uebergabe.py`**
+  - Tooltip auf „💾 Speichern": „Protokoll zwischenspeichern – bleibt als 'offen' bearbeitbar"
+  - Tooltip auf „✓ Abschließen": „Endgültig abschließen – kein Bearbeiten mehr möglich. Abzeichner-Name wird benötigt."
+  - Tooltip auf „📧 E-Mail": „Erstellt einen Outlook-Entwurf mit den Protokolldaten"
+  - Tooltip auf „🗑 Löschen": „Protokoll dauerhaft aus der Datenbank löschen (nicht wiederherstellbar)"
+  - Blaue Info-Box unter den Buttons fasst Speichern / Abschließen / E-Mail zusammen
+
+#### Einstellungen: E-Mobby Beschreibung erweitert
+- **`gui/einstellungen.py`**
+  - Beschreibungstext der E-Mobby-GroupBox präzisiert: „… in der Übergabe-Ansicht als E-Mobby-Fahrer markiert. Nur Nachnamen – Groß-/Kleinschreibung wird ignoriert."
+
+### HilfeDialog stark erweitert (v2.9.1 → v2.9.3 → v2.9.4 kumuliert)
+- **`gui/hilfe_dialog.py`**
+  - Tab „📦 Module": Jedes Modul mit 6–11 detaillierten Bullet-Points und genauen Schaltflächennamen
+  - Tab „🔄 Workflow": 8 Schritte (war 6), jeder mit ausführlicher Beschreibung + neuer „Sondersituationen"-Abschnitt (4 _TipCard's)
+  - Tab „💡 Tipps & FAQ": 14 Tipps (war 8) + 5 FAQ-Einträge + Versionsinfo
+  - **Neuer Tab „📖 Anleitungen"**: 5 vollständige Schritt-für-Schritt-Anleitungen mit je 6–7 _StepCard's
+
+### Dienstplan: UI-Verbesserungen
+- **`gui/dienstplan.py`**
+  - Button-Text bei inaktivem Export: `'Hier klicken um Datei als Wordexport auszuwählen'`
+  - Button-Text bei aktivem Export: `'✓  Für Wordexport gewählt'`
+  - Info-Banner oben erklärt: „Bis zu 4 Dienstpläne gleichzeitig öffnen"
+  - Stärkemeldungs-Dateiname: `Staerkemeldung` → `Stärkemeldung` (Umlaut korrigiert)
+
+### Aufgaben Tag: Template- und Umbenennen-Info-Boxen
+- **`gui/aufgaben_tag.py`** (bereits in v2.9.3 dokumentiert, hier nochmals gruppiert)
+  - Blauer Info-Kasten nach Template-Buttons: erklärt Checklisten- und Checks-Template
+  - Gelber Info-Kasten nach Umbenennen-Checkbox: erklärt `JJJJ_MM_TT`-Umbenennung
+
+---
+
+## 26.02.2026 – v2.9.3
+
+### HilfeDialog: Animationen
+- **`gui/hilfe_dialog.py`** – Komplett neu geschrieben mit Animationen:
+  - Fade+Slide-In beim Tab-Wechsel (`QPropertyAnimation` auf Opacity + Geometry)
+  - Puls-Icon auf dem Hilfe-Button (`QSequentialAnimationGroup`)
+  - Laufbanner mit aktuellem Datum + Versionsnummer
+  - Workflow-Progress-Bar mit Step-Navigation
+
+---
+
+## 26.02.2026 – v2.9.1 / v2.9.2
+
+### Tooltips in der gesamten App
+- **`gui/main_window.py`** – Hilfe-Button + alle Nav-Buttons mit Tooltip
+- **`gui/dashboard.py`** – Statistik-Karten + Flugzeug-Widget mit Tooltip
+- **`gui/dienstplan.py`** – Export-Button, Close-Button, Word-Export-Button, Reload-Button
+- **`gui/einstellungen.py`** – Alle Browse-Buttons, E-Mobby Add/Remove, Protokoll-Buttons
+- **`gui/fahrzeuge.py`** – Edit/Delete/Status/Schaden/Termin-Buttons
+- **`gui/mitarbeiter.py`** – Ausschluss-Button, Refresh-Button
+- **`gui/aufgaben_tag.py`** – Template-Buttons, Anhang-Buttons, Send-Buttons, Code19-Buttons
+- **`gui/sonderaufgaben.py`** – Reload-Tree-Button
+- **`gui/uebergabe.py`** – Protokoll-Buttons, Such- und Filter-Felder
+
+### HilfeDialog (v2.9.2)
+- **`gui/hilfe_dialog.py`** – Neues Hilfe-Fenster mit 4 Tabs:
+  - 🏠 Übersicht, 📦 Module, 🔄 Workflow, 💡 Tipps
+- **`gui/main_window.py`** – Hilfe-Button oben rechts in Sidebar
+
+---
+
 ## 26.02.2026 – v2.8
 
 ### Code-19-Button: Uhr-Symbol

@@ -1,6 +1,6 @@
 # Nesk3 – Vollständige Funktionsübersicht
 
-**Stand:** 26.02.2026  
+**Stand:** 26.02.2026 – v2.9.4  
 **App:** Nesk3 – DRK Erste-Hilfe-Station Flughafen Köln/Bonn  
 **Zweck:** Dienstplan-Verwaltung, Stärkemeldung, Sonderaufgaben, Übergabe, Code-19
 
@@ -70,8 +70,10 @@ Kernfunktionen:
 - **Excel laden**: Öffnet `.xlsx`-Datei via Dateiauswahl oder gespeicherten Pfad aus Einstellungen
 - **Tabelle anzeigen**: HTML-Tabelle mit farbcodierten Diensten
 - **Statuszeile**: Tagdienst / Nachtdienst / Krank-Aufschlüsselung (Betreuer, Dispo, Tag/Nacht/Sonder-Krank)
-- **Export**: Word-Stärkemeldung generieren (via `staerkemeldung_export.py`)
+- **Export**: Word-Stärkemeldung generieren (via `staerkemeldung_export.py`) – Dateiname mit korrektem Umlaut `Stärkemeldung`
 - **Dienst-Typen** (`_TAG_DIENSTE`, `_NACHT_DIENSTE`, `_SONDER_DIENSTE`): Bestimmen Farbe und Kategorisierung
+- **Info-Banner**: Oben erklärt „Bis zu 4 Dienstpläne gleichzeitig öffnen“
+- **Export-Button-Text**: Inaktiv: `'Hier klicken um Datei als Wordexport auswählen'` / Aktiv: `'✓  Für Wordexport gewählt'`
 
 ### `functions/dienstplan_parser.py` – `DienstplanParser`
 - `parse(xlsx_path)`: Liest Excel-Datei, extrahiert alle Mitarbeiter mit Dienst, Zeiten, Funktion
@@ -109,7 +111,10 @@ Tabs innerhalb der Tagdienst-Ansicht:
   - Empfänger, Betreff, Nachrichtentext vorausgefüllt
   - Outlook-Integration via COM (VBS-Script-Logik)
   - „Signatur einfügen"-Button
+  - **Blauer Info-Kasten „Zeitraum“**: Erklärt welche Excel-Zeilen ausgelesen werden (Standard: letzte 7 Tage)
 - **_FreieMailTab**: Frei konfigurierbarer Mail-Tab mit Anhang-Support
+  - **Blauer Info-Kasten** nach Template-Buttons erklärt Checklisten- / Checks-Template
+  - **Gelber Info-Kasten** nach Umbenennen-Checkbox erklärt `JJJJ_MM_TT`-Umbenennung
 - **_ChecklistenTab**: Checklisten-Ansicht für Tagdienst (Symbol: `📋 Checklisten`)
 - Weitere Tabs für tagesspezifische Aufgaben
 
@@ -150,8 +155,12 @@ Kernfunktionen:
   - Tagdienst: Beginn 07:00, Ende 19:00 (automatisch)
   - Nachtdienst: Beginn 19:00, Ende 07:00 (automatisch)
 - **Felder**: Besonderheiten, Fahrzeugstatus, sonstige Hinweise
-- **Speichern**: Speichert Protokoll in SQLite (`uebergabe`-Tabelle)
+- **Speichern**: Speichert Protokoll in SQLite (`uebergabe`-Tabelle) – Protokoll bleibt als `offen` bearbeitbar
+- **Abschließen**: Setzt Status auf `abgeschlossen` – danach keine Bearbeitung mehr möglich; Abzeichner-Name erforderlich
+- **E-Mail**: Erstellt Outlook-Entwurf mit Protokollinhalt
 - **Verlauf laden**: Vorhandene Protokolle anzeigen und bearbeiten
+- **Blaue Info-Box**: Erklärt Unterschied Speichern / Abschließen / E-Mail
+- Tooltips auf allen 4 Buttons (Speichern, Abschließen, E-Mail, Löschen)
 - (Entfernt: „Personal im Dienst" – kein Textfeld mehr)
 
 ### `functions/uebergabe_functions.py`
@@ -194,7 +203,10 @@ Kernfunktionen:
 ### `gui/mitarbeiter.py` – `MitarbeiterWidget(QWidget)`
 - Mitarbeiterliste mit Suche und Filter
 - CRUD: Hinzufügen, Bearbeiten, Löschen
-- Qualifikationen, Funktion (Dispo/Betreuer), Schichtpräferenz
+- **Spalte „Export“** (✅/🚫): Zeigt ob Mitarbeiter in der Stärkemeldungs-Word erscheint
+- **🚫 Ausschließen-Button**: Schließt Mitarbeiter vom Word-Export aus ohne ihn zu löschen
+- **Gelbe Info-Box**: Erklärt Unterschied Ausschließen (kein Export) vs. Löschen
+- Ausgeschlossene Zeilen werden rot hinterlegt
 
 ### `functions/mitarbeiter_functions.py`
 - `get_mitarbeiter()`: Alle Mitarbeiter aus DB
@@ -221,8 +233,7 @@ E-Mobby-Verwaltung:
 - Textfeld + „+ Hinzufügen" (Enter-Taste und Button)
 - „🗑 Entfernen" mit Bestätigung
 - Zähler-Label „X Fahrer in der Liste"
-- Änderungen sofort in DB gespeichert (kein separater Speichern-Button)
-
+- Änderungen sofort in DB gespeichert (kein separater Speichern-Button)- Beschreibungstext präzisiert: erklärt Verbindung zur Übergabe-Ansicht und dass nur Nachnamen einzutragen sind
 ### `functions/settings_functions.py`
 - `get_setting(key, default='')`: Liest Wert aus `settings`-Tabelle
 - `set_setting(key, value)`: Schreibt Wert in `settings`-Tabelle
@@ -290,7 +301,27 @@ E-Mobby-Verwaltung:
 
 ---
 
-## 16. Konfiguration (`config.py`)
+## 17. HilfeDialog
+
+### `gui/hilfe_dialog.py` – `HilfeDialog(QDialog)`
+Animierter Hilfe-Dialog mit 5 Tabs:
+| Tab | Inhalt |
+|-----|--------|
+| 🏠 Übersicht | Willkommens-Banner, Schnellübersicht aller Module |
+| 📦 Module | Jedes Modul mit 6–11 detaillierten Bullet-Points |
+| 🔄 Workflow | 8 Schritte mit ausführlicher Beschreibung + Sondersituationen-Abschnitt |
+| 💡 Tipps & FAQ | 14 Tipps + 5 FAQ-Einträge + Versionsinfo |
+| 📖 Anleitungen | 5 vollständige Schritt-für-Schritt-Anleitungen |
+
+Animationen:
+- Fade+Slide beim Tab-Wechsel (`QPropertyAnimation`)
+- Puls-Icon auf dem Hilfe-Button
+- Laufbanner mit Datum + Version
+- Workflow-Progress-Bar
+
+---
+
+## 17. Konfiguration (`config.py`)
 
 ```python
 BASE_DIR    # Absoluter Pfad zu Nesk3/

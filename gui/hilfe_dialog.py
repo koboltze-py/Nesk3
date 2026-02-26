@@ -281,10 +281,11 @@ class HilfeDialog(QDialog):
             QTabBar::tab:hover { background: #dde3ea; }
         """)
 
-        self._tabs.addTab(self._tab_uebersicht(), "🏠  Übersicht")
-        self._tabs.addTab(self._tab_module(),     "📦  Module")
-        self._tabs.addTab(self._tab_workflow(),   "🔄  Workflow")
-        self._tabs.addTab(self._tab_tipps(),      "💡  Tipps")
+        self._tabs.addTab(self._tab_uebersicht(),   "🏠  Übersicht")
+        self._tabs.addTab(self._tab_module(),        "📦  Module")
+        self._tabs.addTab(self._tab_workflow(),      "🔄  Workflow")
+        self._tabs.addTab(self._tab_tipps(),         "💡  Tipps & FAQ")
+        self._tabs.addTab(self._tab_anleitungen(),   "📖  Anleitungen")
         self._tabs.currentChanged.connect(self._on_tab_changed)
         root.addWidget(self._tabs, 1)
 
@@ -423,66 +424,146 @@ class HilfeDialog(QDialog):
         root.setContentsMargins(24, 20, 24, 20)
         root.setSpacing(14)
 
+        root.addWidget(self._section_label("📦  Alle Module im Detail"))
+
         module_data: list[tuple] = [
             ("🏠", "Dashboard", _COLORS["dashboard"],
-             "Die Startseite zeigt auf einen Blick die wichtigsten Kennzahlen.",
-             ["Aktive Mitarbeiter und Gesamtanzahl",
-              "Schichten heute und im laufenden Monat",
-              "Datenbankstatus (verbunden / Fehler)",
-              "Animiertes Flugzeug-Widget – zum Klicken 😄"]),
+             "Die Startseite von Nesk3. Wird beim Programmstart automatisch angezeigt "
+             "und zeigt die wichtigsten Betriebskennzahlen auf einen Blick. "
+             "Ein Klick auf das Flugzeug-Widget startet eine kleine Animation. 😄",
+             [
+                 "Karte: Aktive Mitarbeiter – Anzahl der aktuell aktiven MA sowie Gesamtanzahl",
+                 "Karte: Schichten heute – wie viele Schichten sind für heute eingetragen",
+                 "Karte: Schichten diesen Monat – Gesamtzahl im laufenden Monat",
+                 "Karte: Datenbankstatus – zeigt 'Verbunden' oder den Fehlerpfad",
+                 "Alle Karten werden beim Öffnen automatisch aus der Datenbank geladen",
+                 "Oben rechts: App-Version und Stationsname sichtbar",
+             ]),
             ("☀️", "Aufgaben Tag", _COLORS["aufgaben"],
-             "Verwaltet alle wiederkehrenden Aufgaben im Tagdienst.",
-             ["Freier E-Mail-Entwurf mit Anhang + Umbenennung",
-              "Schnell-Templates: Checklisten- und Checks-Mail",
-              "Code-19-Monatsbericht per Excel → Outlook",
-              "Signatur-Button: Mail mit persönlicher Outlook-Signatur"]),
+             "Enthält alle wiederkehrenden Aufgaben des Tagdienstes. "
+             "Über die integrierten Mail-Funktionen können Berichte und Meldungen "
+             "direkt an Outlook übergeben werden, inklusive Dateianhänge und Signatur.",
+             [
+                 "Schaltfläche 'Mail erstellen' → öffnet den freien E-Mail-Dialog",
+                 "Im Mail-Dialog: Empfänger, Betreff, Freitext, Anhang-Auswahl",
+                 "Anhang umbenennen: Datei auswählen → neuen Namen eingeben → wird beim Senden umbenannt",
+                 "Template 'Checklisten-Mail': lädt vordefinierten Betreff + Empfänger",
+                 "Template 'Checks-Mail': lädt vordefinierten Betreff + Empfänger",
+                 "Code-19-Button: Monat auswählen → Excel wird geladen → Outlook-Entwurf öffnet sich",
+                 "Signatur-Button: startet VBS-Skript, das Outlook mit Ihrer persönlichen Signatur öffnet",
+                 "Alle Outlook-Aktionen öffnen nur einen Entwurf – Senden geschieht manuell in Outlook",
+             ]),
             ("🌙", "Aufgaben Nacht", _COLORS["nacht"],
-             "Spiegelseite für den Nachtdienst.",
-             ["Gleiche Mail-Funktionen wie Tagdienst",
-              "AOCC Lagebericht direkt öffnen",
-              "Separate Code-19-Berichtsfunktion"]),
+             "Spiegelseite des Tagdienst-Moduls, optimiert für den Nachtdienst. "
+             "Enthält dieselben E-Mail-Funktionen sowie zusätzliche Nacht-spezifische Aktionen.",
+             [
+                 "Gleiche Mail-Funktionen wie im Tagdienst (freier Entwurf, Templates, Signatur)",
+                 "Schaltfläche 'AOCC Lagebericht öffnen' → öffnet die hinterlegte Datei direkt",
+                 "Eigene Code-19-Berichtsfunktion für den Nachtdienst",
+                 "Alle Felder sind separat von den Tagdienst-Feldern – keine gegenseitige Überschreibung",
+             ]),
             ("📅", "Dienstplan", _COLORS["dienstplan"],
-             "Lädt Excel-Dienstpläne und zeigt sie side-by-side.",
-             ["Bis zu 4 Dienstpläne gleichzeitig offen",
-              "Direktladen aus dem Dateibaum",
-              "Word-Export: Stärkemeldung",
-              "E-Mobby-Fahrer automatisch hervorgehoben"]),
+             "Öffnet und zeigt Excel-Dienstpläne an. Mehrere Pläne können gleichzeitig "
+             "nebeneinander angezeigt werden. Über den Export-Mechanismus wird eine "
+             "Word-Stärkemeldung erzeugt.",
+             [
+                 "Dateibaum links: zeigt den konfigurierten Dienstplan-Ordner",
+                 "Datei öffnen: Klick auf eine Excel-Datei im Dateibaum → erscheint als neue Spalte",
+                 "Bis zu 4 Dienstpläne gleichzeitig nebeneinander anzeigen",
+                 "Jede Spalte zeigt: Dateiname, Dienstplaninhalt, Export-Taste",
+                 "Export-Taste: 'Hier klicken um Datei als Wordexport auszuwählen' → Spalte wird blau markiert",
+                 "Word-Export-Button oben: öffnet Dialog zur Zeitraum- und Speicherort-Auswahl",
+                 "Im Export-Dialog: Datum 'von' und 'bis' wählen, dann Speicherort festlegen",
+                 "Ergebnis: Word-Datei 'Stärkemeldung [Datum].docx' wird gespeichert",
+                 "E-Mobby-Fahrer werden im Plan automatisch farblich hervorgehoben",
+             ]),
             ("📋", "Übergabe", _COLORS["uebergabe"],
-             "Erstellt und verwaltet Schichtprotokolle.",
-             ["Neues Protokoll mit einem Klick",
-              "Monatliche Übersicht mit Navigation",
-              "Suche & Filterung nach Schichttyp",
-              "Protokoll per E-Mail weiterleiten",
-              "Schadenmeldungen im E-Mail-Dialog anhaken"]),
+             "Erstellt, verwaltet und verschickt Schichtprotokolle. "
+             "Protokolle werden in der lokalen Datenbank gespeichert und können "
+             "monatsweise durchgeblättert werden.",
+             [
+                 "Tab-Auswahl: '☀ Tagdienst' oder '🌙 Nachtdienst' für getrennte Protokolllisten",
+                 "Schaltfläche 'Neues Protokoll': legt Protokoll mit aktuellem Datum und Schichttyp an",
+                 "Protokoll ausfüllen: Mitarbeitername, Anmerkungen, Ereignisse, Schäden",
+                 "Monatliche Navigation: Vor/Zurück-Buttons wechseln den angezeigten Monat",
+                 "Suchfeld: Protokolle nach Datum, Mitarbeiter oder Inhalt filtern",
+                 "Schaltfläche 'E-Mail erstellen': öffnet Outlook-Entwurf mit Protokollinhalt",
+                 "Im E-Mail-Dialog: Schadenmeldungen per Checkbox anhaken – werden automatisch in den Mailtext übernommen",
+                 "Archivierte Protokolle sind über 'Archiv anzeigen' einsehbar",
+                 "Löschen und Archivieren sind passwortgeschützt (Passwort bei Stationsleitung erfragen)",
+             ]),
             ("🚗", "Fahrzeuge", _COLORS["fahrzeuge"],
-             "Vollständige Fahrzeugverwaltung.",
-             ["Fahrzeuge anlegen, bearbeiten, löschen",
-              "Status-Verlauf mit Grund und Datum",
-              "Schäden dokumentieren (Schwere, Behoben-Datum)",
-              "Unfallbogen-Dialog und Reparaturauftrag-PDF",
-              "Wartungs- und TÜV-Termine",
-              "Globale Suche: Status, Schäden, Termine, Historie"]),
+             "Vollständige Fahrzeugverwaltung mit Status, Schadensdokumentation, "
+             "Reparaturaufträgen und Wartungsterminen. Alle Daten werden in der "
+             "lokalen Datenbank gespeichert.",
+             [
+                 "Tab 'Fahrzeuge': Liste aller Fahrzeuge mit aktuellem Status",
+                 "Fahrzeug hinzufügen: '+ Fahrzeug' → Name, Kennzeichen, Typ eingeben",
+                 "Status ändern: Fahrzeug auswählen → Status-Dropdown → Grund + Datum eingeben",
+                 "Status-Optionen: Einsatzbereit, In Reparatur, Außer Dienst, TÜV fällig",
+                 "Tab 'Schäden': Schäden pro Fahrzeug dokumentieren",
+                 "Schaden melden: 'Neuer Schaden' → Beschreibung, Schweregrad, Datum",
+                 "Schaden beheben: Behoben-Datum setzen → Schaden wird archiviert",
+                 "Unfallbogen-Schaltfläche: öffnet PDF-Unfallbogen im Standard-Betrachter",
+                 "Reparaturauftrag: PDF wird automatisch mit Fahrzeug- und Schadensdaten befüllt",
+                 "Tab 'Wartung': TÜV-Termin, Ölwechsel, letzte Wartung eintragen",
+                 "Globale Suche oben: durchsucht alle Felder (Status, Kennzeichen, Schäden, Termine)",
+             ]),
             ("🕐", "Code 19", _COLORS["code19"],
-             "Protokolliert Code-19-Ereignisse.",
-             ["Einträge mit Uhrzeit und Beschreibung",
-              "Animierte Analoguhr zur Zeiterfassung",
-              "Export / Weiterleitung per E-Mail"]),
+             "Dient der Protokollierung von Code-19-Ereignissen während der Schicht. "
+             "Enthält eine animierte Analoguhr zur schnellen Zeiterfassung.",
+             [
+                 "Ereignis erfassen: Uhrzeit (aus Uhr übernehmen oder manuell) + Freitextbeschreibung",
+                 "Animierte Analoguhr: zeigt aktuelle Uhrzeit, Klick übernimmt Uhrzeit ins Feld",
+                 "Liste aller Einträge im aktuellen Protokoll",
+                 "Eintrag löschen: Zeile markieren → 'Löschen'",
+                 "Export: vollständiges Protokoll als Outlook-E-Mail-Entwurf",
+                 "Verknüpft mit Code-19-Excel-Datei für den monatlichen Bericht (s. Aufgaben)",
+             ]),
             ("🖨️", "Ma. Ausdrucke", _COLORS["ausdrucke"],
-             "Zeigt alle Vordrucke zum Öffnen oder Direktdruck.",
-             ["Alle Dateien in Daten/Vordrucke",
-              "'Öffnen' startet das zugehörige Programm",
-              "'Drucken' sendet direkt an Standarddrucker"]),
+             "Zeigt alle im Ordner 'Daten/Vordrucke' abgelegten Dateien an. "
+             "Jede Datei kann geöffnet oder direkt an den Drucker gesendet werden.",
+             [
+                 "Automatische Erkennung aller Dateien im konfigurierten Vordrucke-Ordner",
+                 "Schaltfläche 'Öffnen': startet das zum Dateityp gehörende Programm (Word, PDF, ...)",
+                 "Schaltfläche 'Drucken': sendet die Datei direkt an den Windows-Standarddrucker",
+                 "Liste wird beim Öffnen des Tabs automatisch aktualisiert",
+                 "Pfad zum Vordrucke-Ordner ist in den Einstellungen konfigurierbar",
+             ]),
             ("🤒", "Krankmeldungen", _COLORS["krankmeldung"],
-             "Öffnet Krankmeldungsformulare je Mitarbeiter.",
-             ["Automatische Unterordner-Erkennung",
-              "Suche nach Mitarbeitername",
-              "Öffnen und Drucken direkt"]),
+             "Bietet schnellen Zugriff auf die Krankmeldungsformulare der einzelnen Mitarbeiter. "
+             "Formulare liegen meistens als Excel- oder Word-Dateien in Unterordnern vor.",
+             [
+                 "Automatische Erkennung von Mitarbeiter-Unterordnern im konfigurierten Pfad",
+                 "Suchfeld: Mitarbeiternamen eingeben → Liste filtert in Echtzeit",
+                 "Schaltfläche 'Öffnen': startet die Datei im Standard-Editor",
+                 "Schaltfläche 'Drucken': sendet die Datei direkt an den Drucker",
+                 "Pfad zum Krankmeldungs-Ordner ist in den Einstellungen festlegbar",
+             ]),
+            ("💾", "Backup", _COLORS["backup"],
+             "Erstellt und stellt Sicherungen der lokalen Datenbank her. "
+             "Sichert alle Protokoll-, Fahrzeug- und Mitarbeiterdaten.",
+             [
+                 "Schaltfläche 'Backup erstellen': kopiert die aktuelle Datenbank in den Backup-Ordner",
+                 "Dateiname enthält automatisch Datum und Uhrzeit",
+                 "Schaltfläche 'Backup wiederherstellen': wählt eine Sicherungsdatei aus und stellt sie wieder her",
+                 "Warnung vor dem Wiederherstellen: aktuelle Daten werden überschrieben",
+                 "Backup-Ordner ist in den Einstellungen konfigurierbar",
+             ]),
             ("⚙️", "Einstellungen", _COLORS["einstellung"],
-             "Zentrale Konfiguration und Datenverwaltung.",
-             ["Ordner-Pfade konfigurieren",
-              "E-Mobby-Fahrerliste pflegen",
-              "Protokolle löschen / archivieren (passwortgeschützt)",
-              "Archiv-Datenbank verwalten"]),
+             "Zentrale Konfigurationsseite. Hier werden alle Ordnerpfade, Benutzerdaten "
+             "und Verwaltungsoptionen festgelegt. Einige Aktionen sind passwortgeschützt.",
+             [
+                 "Pfad: Dienstplan-Ordner – wo liegen die Excel-Dienstpläne?",
+                 "Pfad: Vordrucke-Ordner – welcher Ordner enthält die Ausdrucke?",
+                 "Pfad: Krankmeldungs-Ordner – Unterordner pro Mitarbeiter",
+                 "Pfad: Backup-Ordner – Speicherort für Datensicherungen",
+                 "E-Mobby-Fahrerliste: Namen hinzufügen/entfernen (werden im Dienstplan hervorgehoben)",
+                 "Protokolle archivieren: verschiebt ältere Übergabeprotokolle in die Archiv-DB",
+                 "Protokolle löschen: löscht Protokolle dauerhaft (passwortgeschützt!)",
+                 "Archiv-Datenbank verwalten: Archiv einsehen oder zurückspielen",
+                 "Alle Pfadänderungen sind sofort wirksam – kein Neustart nötig",
+             ]),
         ]
         cards: list[QWidget] = []
         for data in module_data:
@@ -500,7 +581,17 @@ class HilfeDialog(QDialog):
         root.setContentsMargins(24, 20, 24, 20)
         root.setSpacing(16)
 
-        root.addWidget(self._section_label("🔄  Typischer Schichtablauf"))
+        root.addWidget(self._section_label("🔄  Typischer Schichtablauf – Schritt für Schritt"))
+
+        intro = QLabel(
+            "Der folgende Ablauf beschreibt einen typischen Tagesablauf an der EHS. "
+            "Nicht alle Schritte sind bei jeder Schicht zwingend notwendig – passen Sie "
+            "die Reihenfolge an die aktuelle Lage an."
+        )
+        intro.setWordWrap(True)
+        intro.setFont(QFont("Arial", 11))
+        intro.setStyleSheet("color: #555;")
+        root.addWidget(intro)
 
         # Fortschrittsbalken – wird animiert wenn Tab aufgerufen
         self._wf_bar = QProgressBar()
@@ -523,22 +614,63 @@ class HilfeDialog(QDialog):
         root.addWidget(self._wf_bar)
 
         steps = [
-            ("1", "🏠", "#0a73c4", "App starten → Dashboard",
-             "Startet auf dem Dashboard. DB-Status und Schichtübersicht sofort sichtbar."),
-            ("2", "📋", "#2980b9", "Übergabe-Protokoll anlegen",
-             "Tab '📋 Übergabe' → '☀ Tagdienst' oder '🌙 Nachtdienst' → Protokoll wird angelegt."),
-            ("3", "🚗", "#c0392b", "Fahrzeuge prüfen",
-             "Tab '🚗 Fahrzeuge' → Status kontrollieren → Auffälligkeiten sofort als Schaden erfassen."),
-            ("4", "☀️", "#e67e22", "Aufgaben abarbeiten",
-             "Tages- oder Nachtdienst-Aufgaben abhaken. Code-19-Mail bei Bedarf direkt versenden."),
-            ("5", "📅", "#27ae60", "Dienstplan laden (optional)",
-             "Excel-Datei aus dem Dateibaum öffnen. Bei Bedarf als Word-Stärkemeldung exportieren."),
-            ("6", "📋", "#2980b9", "Protokoll abschließen & weiterleiten",
-             "Protokoll ausfüllen → 'E-Mail erstellen' → Schäden anhaken → Outlook-Entwurf öffnen."),
+            ("1", "🏠", "#0a73c4", "App starten → Dashboard prüfen",
+             "Programm starten. Das Dashboard öffnet sich automatisch. "
+             "DB-Status (grün = verbunden), Mitarbeiterzahl und heutige Schichten prüfen. "
+             "Blinkt der Status rot → Datenbankpfad in den Einstellungen korrekt hinterlegt?"),
+            ("2", "📋", "#2980b9", "Übergabeprotokoll anlegen",
+             "Tab '📋 Übergabe' öffnen → Tab '☀ Tagdienst' oder '🌙 Nachtdienst' wählen → "
+             "'Neues Protokoll' klicken. Das Protokoll wird mit aktuellem Datum und Schichttyp angelegt. "
+             "Namen und ersten Eintrag sofort ausfüllen, damit nichts vergessen wird."),
+            ("3", "🚗", "#c0392b", "Fahrzeuge kontrollieren",
+             "Tab '🚗 Fahrzeuge' öffnen. Status jedes Fahrzeugs prüfen. "
+             "Neue Schäden sofort über '+ Schaden' dokumentieren – Schweregrad, Beschreibung, Datum. "
+             "Bei Bedarf Reparaturauftrag als PDF erstellen und weiterleiten."),
+            ("4", "☀️", "#e67e22", "Aufgaben bearbeiten",
+             "Tab '☀ Aufgaben Tag' oder '🌙 Aufgaben Nacht' öffnen. "
+             "Checklisten und Templates nutzen. Code-19-Meldung: Code-19-Button klicken → "
+             "Monat auswählen → Outlook-Entwurf erscheint automatisch. "
+             "AOCC Lagebericht (Nachtdienst): direkter Öffnen-Button verfügbar."),
+            ("5", "📅", "#27ae60", "Dienstplan laden und prüfen",
+             "Tab '📅 Dienstplan' öffnen. Im Dateibaum links die gewünschte Excel-Datei anklicken. "
+             "Die Datei erscheint als Spalte. Für Word-Export: "
+             "'Hier klicken…' Schaltfläche im Panel klicken (blaue Markierung) → "
+             "dann oben 'Word exportieren' → Zeitraum und Speicherort wählen → OK."),
+            ("6", "🕐", "#e74c3c", "Code-19-Ereignisse protokollieren",
+             "Tab '🕐 Code 19' öffnen. Ereignis eintreten → Analoguhr klicken um Uhrzeit "
+             "automatisch zu übernehmen → Beschreibung eingeben → 'Hinzufügen'. "
+             "Am Ende der Schicht: 'E-Mail erstellen' → Outlook-Entwurf mit vollständigem Protokoll."),
+            ("7", "📋", "#2980b9", "Protokoll abschließen und weiterleiten",
+             "Zurück zu '📋 Übergabe'. Offene Felder ausfüllen – Ereignisse, Anmerkungen, Besonderheiten. "
+             "'E-Mail erstellen' klicken. Im Dialog: aufgetretene Schäden per Checkbox anhaken. "
+             "Outlook öffnet einen fertigen Entwurf → prüfen → manuell absenden."),
+            ("8", "💾", "#7f8c8d", "Backup (empfohlen am Schichtende)",
+             "Tab '💾 Backup' öffnen → 'Backup erstellen'. "
+             "Die Datenbank wird mit Datums-Zeitstempel in den Backup-Ordner kopiert. "
+             "Empfehlenswertes Intervall: mind. einmal täglich oder nach umfangreichen Eingaben."),
         ]
         step_cards: list[QWidget] = []
         for num, ico, col, title, desc in steps:
             card = _StepCard(num, ico, col, title, desc)
+            root.addWidget(card)
+            step_cards.append(card)
+
+        root.addSpacing(8)
+        root.addWidget(self._section_label("⚡  Häufige Sondersituationen"))
+        sonder = [
+            ("🔴", "#e74c3c", "Fahrzeug fällt aus",
+             "Fahrzeuge → Status auf 'Außer Dienst' setzen, Grund eintragen. "
+             "Schaden dokumentieren. Reparaturauftrag erstellen. In Übergabe vermerken."),
+            ("📞", "#0a73c4", "Notfall-Sonderaufgabe",
+             "Sonderaufgaben-Modul öffnen (falls vorhanden). Ereignis in Code-19 und/oder "
+             "Übergabeprotokoll festhalten."),
+            ("🤒", "#d35400", "Krankmeldung eines MA",
+             "Krankmeldungen → Mitarbeiter suchen → Formular öffnen und ausfüllen → drucken."),
+            ("📄", "#16a085", "Formular / Vordruck wird benötigt",
+             "Ma. Ausdrucke → Datei suchen → 'Öffnen' zum Bearbeiten oder 'Drucken' für Direktdruck."),
+        ]
+        for ico, col, title, desc in sonder:
+            card = _TipCard(ico, title, desc, col)
             root.addWidget(card)
             step_cards.append(card)
 
@@ -553,36 +685,110 @@ class HilfeDialog(QDialog):
         root.setContentsMargins(24, 20, 24, 20)
         root.setSpacing(12)
 
-        root.addWidget(self._section_label("💡  Nützliche Hinweise"))
+        root.addWidget(self._section_label("💡  Tipps, Hinweise & häufige Fragen"))
 
         tipps = [
-            ("🖱️", "Tooltips",
-             "Fahren Sie mit der Maus über jeden Button oder jedes Feld – ein Tooltip erklärt die Funktion.",
+            ("🖱️", "Tooltips nutzen",
+             "Fahren Sie mit der Maus über jeden Button, jedes Textfeld oder jedes Symbol – "
+             "ein Tooltip-Fenster erklärt die genaue Funktion. So lernen Sie die App am schnellsten kennen.",
              "#0a73c4"),
-            ("🔍", "Globale Suche",
-             "In 'Fahrzeuge' und 'Übergabe' gibt es oben eine Suchleiste. Filter: Status, Schäden, Termine, Protokolldatum.",
+            ("🔍", "Globale Suche (Fahrzeuge & Übergabe)",
+             "Sowohl im Fahrzeug-Modul als auch im Übergabe-Modul gibt es eine Suchleiste oben. "
+             "Fahrzeuge: Suche nach Kennzeichen, Status, Schadensart. "
+             "Übergabe: Suche nach Datum, Mitarbeitername oder Stichwort im Protokolltext.",
              "#27ae60"),
             ("📧", "Outlook-Integration",
-             "Alle E-Mail-Buttons erstellen einen fertigen Outlook-Entwurf. Mit dem Signatur-Button wird Ihre persönliche Signatur automatisch eingefügt.",
+             "Alle E-Mail-Schaltflächen erstellen einen fertigen Outlook-Entwurf – sie senden nichts "
+             "automatisch ab. Sie können den Entwurf in Outlook noch bearbeiten, Empfänger ändern "
+             "und erst dann manuell absenden. Keine unbeabsichtigten Mails möglich!",
              "#2980b9"),
-            ("💾", "Datenbank",
-             "Alle Daten werden in einer lokalen SQLite-Datenbank gespeichert. Pfad im Dashboard-DB-Status sichtbar.",
-             "#7f8c8d"),
-            ("📦", "Archivieren statt Löschen",
-             "In den Einstellungen können Sie Protokolle archivieren statt löschen. Archiv bleibt erhalten.",
+            ("✍️", "Signatur-Button",
+             "Der Signatur-Button in den Aufgaben-Modulen startet ein VBS-Skript, das Outlook mit "
+             "Ihrer persönlichen Signatur öffnet. Funktioniert nur, wenn Outlook als Standard-Mailclient "
+             "eingerichtet ist und die Signatur in Outlook hinterlegt ist.",
              "#8e44ad"),
-            ("🖨️", "Drucken",
-             "In 'Ma. Ausdrucke' und 'Krankmeldungen' können Dateien direkt an den Drucker geschickt werden.",
-             "#16a085"),
-            ("🗂️", "Mehrere Dienstpläne",
-             "Im Dienstplan-Tab können bis zu 4 Excel-Dateien gleichzeitig geöffnet und verglichen werden.",
-             "#e67e22"),
+            ("💾", "Datenbank-Pfad",
+             "Alle Daten werden in einer lokalen SQLite-Datenbank gespeichert. Den aktuellen Pfad "
+             "sehen Sie im Dashboard unter 'DB-Status'. Pfad ändern: Einstellungen → Datenbankpfad.",
+             "#7f8c8d"),
+            ("📦", "Archivieren statt löschen",
+             "Protokolle sollten archiviert statt gelöscht werden! Archivierte Protokolle werden in "
+             "eine separate Archiv-Datenbank verschoben und bleiben dauerhaft lesbar. "
+             "Löschen entfernt Daten unwiederbringlich.",
+             "#8e44ad"),
+            ("🗂️", "Mehrere Dienstpläne nebeneinander",
+             "Im Dienstplan-Tab können bis zu 4 Excel-Dateien gleichzeitig geöffnet sein. "
+             "Klicken Sie einfach auf weitere Dateien im Dateibaum links – jede öffnet eine neue Spalte. "
+             "Für den Word-Export: erst im gewünschten Panel 'Hier klicken…' auswählen (blau markiert), "
+             "dann oben 'Word exportieren'.",
+             "#27ae60"),
             ("🔒", "Passwortschutz",
-             "Löschen/Archivieren von Protokollen ist passwortgeschützt. Bitte bei der Stationsleitung erfragen.",
+             "Das Löschen und Archivieren von Protokollen ist passwortgeschützt. "
+             "Das Passwort erfragen Sie bei der Stationsleitung. "
+             "Bitte geben Sie das Passwort nicht an unbefugte Personen weiter.",
              "#e74c3c"),
+            ("🖨️", "Direktdruck",
+             "In 'Ma. Ausdrucke' und 'Krankmeldungen' können Dateien direkt an den Windows-"
+             "Standarddrucker gesendet werden, ohne die Datei zuerst zu öffnen. "
+             "Stellen Sie sicher, dass der richtige Drucker in Windows als Standard gesetzt ist.",
+             "#16a085"),
+            ("📅", "Datum-Navigation in der Übergabe",
+             "Im Übergabe-Modul können Sie über die Vor/Zurück-Pfeile monatsweise durch alle "
+             "Protokolle blättern. So finden Sie auch ältere Einträge schnell wieder. "
+             "Das Suchfeld filtert alle sichtbaren Einträge in Echtzeit.",
+             "#2980b9"),
+            ("🚗", "Reparaturauftrag erstellen",
+             "Im Fahrzeug-Modul einen Schaden markieren → 'Reparaturauftrag' → es wird ein PDF "
+             "mit allen relevanten Fahrzeug- und Schadensdaten automatisch befüllt. "
+             "Das PDF kann dann geöffnet, ergänzt und ausgedruckt werden.",
+             "#c0392b"),
+            ("⚙️", "Einstellungen direkt erreichbar",
+             "Die Einstellungen sind jederzeit über den Tab '⚙ Einstellungen' oben erreichbar. "
+             "Dort können alle Pfade nachträglich angepasst werden. "
+             "Pfadänderungen wirken sofort ohne Neustart.",
+             "#2c3e50"),
+            ("🔄", "App neu laden",
+             "Falls Daten nicht aktuell erscheinen: zwischen Tabs hin- und herwechseln aktualisiert die Ansicht. "
+             "Ein vollständiger Neustart der App stellt immer den konsistenten Datenbankzustand her.",
+             "#0a73c4"),
+            ("📁", "Pfade konfigurieren",
+             "Alle wichtigen Ordnerpfade (Dienstpläne, Vordrucke, Krankmeldungen, Backup) werden in den "
+             "Einstellungen festgelegt. Wenn eine Schaltfläche nicht reagiert oder eine Fehlermeldung "
+             "erscheint, zuerst den entsprechenden Pfad in den Einstellungen prüfen.",
+             "#e67e22"),
         ]
         cards: list[QWidget] = []
         for ico, title, text, col in tipps:
+            card = _TipCard(ico, title, text, col)
+            root.addWidget(card)
+            cards.append(card)
+
+        root.addSpacing(8)
+        root.addWidget(self._section_label("❓  Häufig gestellte Fragen"))
+
+        faq = [
+            ("❓", "Warum öffnet sich kein Outlook-Fenster?",
+             "Outlook muss als Standard-E-Mail-Programm in Windows eingerichtet sein. "
+             "Prüfen: Windows-Einstellungen → Standard-Apps → E-Mail → Outlook auswählen.",
+             "#e74c3c"),
+            ("❓", "Der Dateibaum im Dienstplan ist leer – was tun?",
+             "Den Dienstplan-Pfad in den Einstellungen (⚙) überprüfen. "
+             "Der Pfad muss auf den Ordner zeigen, in dem die Excel-Dateien liegen.",
+             "#27ae60"),
+            ("❓", "Wie exportiere ich eine Stärkemeldung als Word?",
+             "Dienstplan öffnen → im Panel 'Hier klicken um Datei als Wordexport auszuwählen' klicken "
+             "(Panel wird blau) → oben 'Word exportieren' klicken → Zeitraum und Speicherort wählen → OK.",
+             "#27ae60"),
+            ("❓", "Die Datenbank zeigt einen Fehler – was tun?",
+             "Einstellungen öffnen → Datenbankpfad prüfen und ggf. korrigieren. "
+             "Alternativ: Backup wiederherstellen, falls Daten verloren gegangen sind.",
+             "#e74c3c"),
+            ("❓", "Wie füge ich einen neuen E-Mobby-Fahrer hinzu?",
+             "Einstellungen → Abschnitt 'E-Mobby-Fahrer' → Namen eingeben → 'Hinzufügen'. "
+             "Der Name erscheint ab sofort im Dienstplan farblich hervorgehoben.",
+             "#0a73c4"),
+        ]
+        for ico, title, text, col in faq:
             card = _TipCard(ico, title, text, col)
             root.addWidget(card)
             cards.append(card)
@@ -611,6 +817,143 @@ class HilfeDialog(QDialog):
 
         root.addStretch()
         self._tab_widgets[3] = cards
+        return self._scroll_wrap(w)
+
+    # ── Tab 4: Schritt-für-Schritt Anleitungen ────────────────────────────────
+    def _tab_anleitungen(self) -> QWidget:
+        w = QWidget()
+        root = QVBoxLayout(w)
+        root.setContentsMargins(24, 20, 24, 20)
+        root.setSpacing(14)
+
+        root.addWidget(self._section_label("📖  Schritt-für-Schritt Anleitungen"))
+
+        anleitungen = [
+            {
+                "title": "📅  Dienstplan laden und als Word exportieren",
+                "color": _COLORS["dienstplan"],
+                "steps": [
+                    ("1", "📅", "#27ae60", "Dienstplan-Tab öffnen",
+                     "Klicken Sie oben in der Navigation auf den Tab '📅 Dienstplan'."),
+                    ("2", "🗂️", "#27ae60", "Dateibaum prüfen",
+                     "Links sehen Sie den Dateibaum. Ist er leer → Einstellungen → Dienstplan-Pfad prüfen."),
+                    ("3", "📂", "#27ae60", "Excel-Datei öffnen",
+                     "Klicken Sie auf eine Excel-Datei im Dateibaum. Sie erscheint als Spalte rechts."),
+                    ("4", "🖱️", "#27ae60", "Für Export markieren",
+                     "Klicken Sie im Panel auf 'Hier klicken um Datei als Wordexport auszuwählen'. "
+                     "Das Panel wird blau umrandet – ✓ Für Wordexport gewählt erscheint auf der Taste."),
+                    ("5", "📝", "#27ae60", "Word exportieren",
+                     "Klicken Sie oben auf 'Word exportieren'. Es öffnet sich der Export-Dialog."),
+                    ("6", "📆", "#27ae60", "Zeitraum und Pfad wählen",
+                     "Von-Datum und Bis-Datum einstellen. Dann Speicherort-Schaltfläche klicken "
+                     "und Zielordner auswählen."),
+                    ("7", "✅", "#27ae60", "Export starten",
+                     "Auf 'Exportieren' klicken. Die Datei 'Stärkemeldung [Datum].docx' wird gespeichert."),
+                ],
+            },
+            {
+                "title": "📋  Übergabeprotokoll erstellen und weiterleiten",
+                "color": _COLORS["uebergabe"],
+                "steps": [
+                    ("1", "📋", "#2980b9", "Übergabe-Tab öffnen",
+                     "Klicken Sie oben auf den Tab '📋 Übergabe'."),
+                    ("2", "☀️", "#2980b9", "Schichttyp wählen",
+                     "Wählen Sie den Sub-Tab '☀ Tagdienst' oder '🌙 Nachtdienst'."),
+                    ("3", "➕", "#2980b9", "Neues Protokoll anlegen",
+                     "Klicken Sie auf 'Neues Protokoll'. Das Formular öffnet sich mit aktuellem Datum."),
+                    ("4", "✍️", "#2980b9", "Protokoll ausfüllen",
+                     "Mitarbeitername, Schichtbesonderheiten, Ereignisse und Schadenmeldungen eintragen."),
+                    ("5", "📧", "#2980b9", "E-Mail erstellen",
+                     "Klicken Sie auf 'E-Mail erstellen'. Der E-Mail-Dialog erscheint."),
+                    ("6", "☑️", "#2980b9", "Schäden anhaken",
+                     "Im Mail-Dialog aufgetretene Schäden per Checkbox auswählen – "
+                     "sie werden automatisch in den Mailtext eingefügt."),
+                    ("7", "📨", "#2980b9", "Outlook-Entwurf öffnen",
+                     "Auf 'E-Mail-Entwurf öffnen' klicken. Outlook öffnet sich mit fertigem Text. "
+                     "Inhalt prüfen und manuell absenden."),
+                ],
+            },
+            {
+                "title": "🚗  Fahrzeugschaden melden und Reparaturauftrag erstellen",
+                "color": _COLORS["fahrzeuge"],
+                "steps": [
+                    ("1", "🚗", "#c0392b", "Fahrzeuge-Tab öffnen",
+                     "Klicken Sie oben auf den Tab '🚗 Fahrzeuge'."),
+                    ("2", "🖱️", "#c0392b", "Fahrzeug auswählen",
+                     "Das betroffene Fahrzeug in der Liste anklicken."),
+                    ("3", "🔧", "#c0392b", "Schäden-Tab wechseln",
+                     "Im Fahrzeugdetail auf den Tab 'Schäden' wechseln."),
+                    ("4", "➕", "#c0392b", "Neuen Schaden erfassen",
+                     "'+ Schaden hinzufügen' klicken → Beschreibung, Schweregrad (leicht/mittel/schwer), "
+                     "Datum eingeben → Speichern."),
+                    ("5", "🔴", "#c0392b", "Status aktualisieren",
+                     "Zurück zur Fahrzeugliste → Status-Dropdown → 'In Reparatur' oder 'Außer Dienst' → "
+                     "Grund und Datum eingeben → Speichern."),
+                    ("6", "📄", "#c0392b", "Reparaturauftrag PDF",
+                     "Im Schäden-Tab den Schaden markieren → 'Reparaturauftrag' klicken. "
+                     "Das PDF öffnet sich mit Fahrzeug- und Schadensdaten vorausgefüllt."),
+                    ("7", "📋", "#c0392b", "In Übergabe vermerken",
+                     "Schaden im Übergabeprotokoll dokumentieren, damit die nächste Schicht informiert ist."),
+                ],
+            },
+            {
+                "title": "🕐  Code-19-Ereignis protokollieren",
+                "color": _COLORS["code19"],
+                "steps": [
+                    ("1", "🕐", "#e74c3c", "Code-19-Tab öffnen",
+                     "Klicken Sie oben auf den Tab '🕐 Code 19'."),
+                    ("2", "🕰️", "#e74c3c", "Uhrzeit erfassen",
+                     "Die Analoguhr zeigt die aktuelle Zeit. Klick auf die Uhr übernimmt die Uhrzeit "
+                     "automatisch ins Zeitfeld. Alternativ: Uhrzeit manuell eingeben."),
+                    ("3", "✍️", "#e74c3c", "Beschreibung eingeben",
+                     "Im Textfeld den Vorgang beschreiben, z.B. 'Patient X, 14:23 Ankunft, ...'."),
+                    ("4", "➕", "#e74c3c", "Eintrag hinzufügen",
+                     "'Hinzufügen' klicken. Der Eintrag erscheint in der Liste."),
+                    ("5", "🗑️", "#e74c3c", "Korrektur / Löschen",
+                     "Eintrag in der Liste markieren → 'Löschen' klicken. Dann neu erfassen."),
+                    ("6", "📧", "#e74c3c", "Am Schichtende: E-Mail",
+                     "'E-Mail erstellen' klicken → Outlook-Entwurf mit vollständigem Protokoll erscheint. "
+                     "Prüfen und manuell versenden."),
+                ],
+            },
+            {
+                "title": "⚙️  Ersteinrichtung: Pfade konfigurieren",
+                "color": _COLORS["einstellung"],
+                "steps": [
+                    ("1", "⚙️", "#2c3e50", "Einstellungen öffnen",
+                     "Klicken Sie oben auf den Tab '⚙ Einstellungen'."),
+                    ("2", "📅", "#2c3e50", "Dienstplan-Pfad festlegen",
+                     "Auf das Ordner-Symbol neben 'Dienstplan-Ordner' klicken → "
+                     "Ordner mit den Excel-Dienstplänen auswählen → Speichern."),
+                    ("3", "🖨️", "#2c3e50", "Vordrucke-Pfad festlegen",
+                     "Ordner-Symbol neben 'Vordrucke-Ordner' → Ordner mit Druckvorlagen auswählen."),
+                    ("4", "🤒", "#2c3e50", "Krankmeldungs-Pfad prüfen",
+                     "Pfad zum Ordner mit den Mitarbeiter-Unterordnern für Krankmeldungen festlegen."),
+                    ("5", "💾", "#2c3e50", "Backup-Ordner festlegen",
+                     "Sicherungsordner auswählen. Empfehlung: Netzlaufwerk oder OneDrive-Ordner."),
+                    ("6", "🚐", "#2c3e50", "E-Mobby-Fahrer hinzufügen",
+                     "Namen in das Eingabefeld eingeben → 'Hinzufügen'. Im Dienstplan werden diese "
+                     "Personen farblich hervorgehoben."),
+                    ("7", "✅", "#2c3e50", "Einstellungen prüfen",
+                     "Dashboard öffnen – zeigt der DB-Status 'Verbunden'? ✓ App ist einsatzbereit."),
+                ],
+            },
+        ]
+
+        all_cards: list[QWidget] = []
+        for anl in anleitungen:
+            # Abschnitts-Header
+            sec_lbl = self._section_label(anl["title"])
+            root.addWidget(sec_lbl)
+            all_cards.append(sec_lbl)
+            for step_data in anl["steps"]:
+                card = _StepCard(*step_data)
+                root.addWidget(card)
+                all_cards.append(card)
+            root.addSpacing(8)
+
+        root.addStretch()
+        self._tab_widgets[4] = all_cards
         return self._scroll_wrap(w)
 
     # ── Gemeinsame Helfer ─────────────────────────────────────────────────────

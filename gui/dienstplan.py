@@ -283,9 +283,9 @@ class ExportDialog(QDialog):
         von_str = f"{qv.day():02d}.{qv.month():02d}.{qv.year()}"
         bis_str = f"{qb.day():02d}.{qb.month():02d}.{qb.year()}"
         if qv == qb:
-            name = f"Staerkemeldung {von_str}.docx"
+            name = f"Stärkemeldung {von_str}.docx"
         else:
-            name = f"Staerkemeldung {von_str} - {bis_str}.docx"
+            name = f"Stärkemeldung {von_str} - {bis_str}.docx"
         return os.path.join(ziel_dir, name)
 
     def _update_default_pfad(self):
@@ -457,7 +457,10 @@ class _DienstplanPane(QWidget):
         self._is_export_active = active
         self._update_header_style()
         self._export_btn.setEnabled(not active)
-        self._export_btn.setText('Aktiv fuer Export' if active else 'Fuer Export auswaehlen')
+        self._export_btn.setText(
+            '✓  Für Wordexport gewählt' if active
+            else 'Hier klicken um Datei als Wordexport auszuwählen'
+        )
 
     def _update_header_style(self):
         if self._is_export_active:
@@ -1073,6 +1076,21 @@ class DienstplanWidget(QWidget):
         top.addWidget(reload_btn)
 
         outer.addLayout(top)
+
+        # Info-Banner: Mehrere Dienstpläne gleichzeitig
+        info_banner = QLabel(
+            "ℹ️   Bis zu 4 Dienstpläne gleichzeitig öffnen: "
+            "Klicken Sie im Dateibaum links auf eine Excel-Datei – "
+            "jede Datei erscheint als eigene Spalte nebeneinander. "
+            "Um eine Datei für den Word-Export auszuwählen, klicken Sie in der "
+            "jeweiligen Spalte auf die Schaltfläche \"Hier klicken um Datei als Wordexport auszuwählen\"."
+        )
+        info_banner.setWordWrap(True)
+        info_banner.setStyleSheet(
+            "background-color: #e8f0fb; border: 1px solid #b0c8f0; "
+            "border-radius: 6px; padding: 8px 14px; color: #1a4a8a; font-size: 12px;"
+        )
+        outer.addWidget(info_banner)
 
         # Splitter: Dateibaum links | Panes rechts
         outer_splitter = QSplitter(Qt.Orientation.Horizontal)

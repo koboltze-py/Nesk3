@@ -156,6 +156,20 @@ class _FreieMailTab(QWidget):
         tpl_row.addWidget(btn_checks)
         tpl_row.addStretch()
         sec_text_lay.addLayout(tpl_row)
+
+        tpl_info = QLabel(
+            "ℹ️  <b>Checklisten-Template</b>: Füllt Betreff und Mailtext automatisch "
+            "mit \"Checklisten vom TT.MM.JJJJ\" – ⵡ <b>Checks-Template</b>: gleich, aber mit \"Checks vom TT.MM.JJJJ\". "
+            "Das Datum kann links mit dem Datumsfeld frei gewählt werden. "
+            "Anschließend Anhang hinzufügen und ‘Outlook-Entwurf erstellen’ klicken."
+        )
+        tpl_info.setWordWrap(True)
+        tpl_info.setTextFormat(Qt.TextFormat.RichText)
+        tpl_info.setStyleSheet(
+            "background: #e8f4fb; border: 1px solid #b0d8f0; border-radius: 5px; "
+            "padding: 7px 12px; color: #1a4a6b; font-size: 11px;"
+        )
+        sec_text_lay.addWidget(tpl_info)
         layout.addWidget(sec_text)
 
         # ── Anhang ─────────────────────────────────────────────────────────────
@@ -200,6 +214,21 @@ class _FreieMailTab(QWidget):
         self._rename_preview_lbl.setStyleSheet("color: #555; font-style: italic;")
         rename_row.addWidget(self._rename_preview_lbl, 1)
         sec_att_lay.addLayout(rename_row)
+
+        rename_info = QLabel(
+            "ℹ️  <b>Umbenennen zu Datum</b>: Wenn aktiviert, wird die gewählte Anhang-Datei "
+            "beim Versand automatisch in das Format <b>JJJJ_MM_TT</b> umbenannt "
+            "(z. B. \"2026_02_26.pdf\"). "
+            "Die Originaldatei bleibt unverändert – es wird eine umbenannte Kopie als Anhang an Outlook übergeben. "
+            "Nützlich, wenn Checklisten oder Checks-Berichte tagesaktuell archiviert werden sollen."
+        )
+        rename_info.setWordWrap(True)
+        rename_info.setTextFormat(Qt.TextFormat.RichText)
+        rename_info.setStyleSheet(
+            "background: #fff8e8; border: 1px solid #f0d080; border-radius: 5px; "
+            "padding: 7px 12px; color: #5a3e00; font-size: 11px;"
+        )
+        sec_att_lay.addWidget(rename_info)
         self._rename_chk.toggled.connect(self._update_rename_preview)
         self._rename_date.dateChanged.connect(self._update_rename_preview)
         layout.addWidget(sec_att)
@@ -405,6 +434,20 @@ class _Code19MailTab(QWidget):
         date_row.addLayout(bis_grp)
         date_row.addStretch()
         date_lay.addLayout(date_row)
+
+        zeitraum_info = QLabel(
+            "ℹ️  <b>Zeitraum</b>: Legt fest, welche Dienstplaneinträge aus der "
+            "Code 19 Excel-Datei in die E-Mail übernommen werden. "
+            "Es werden alle Zeilen berücksichtigt, deren Datum in diesem "
+            "Bereich liegt. Standard: letzte 7 Tage bis heute."
+        )
+        zeitraum_info.setWordWrap(True)
+        zeitraum_info.setTextFormat(Qt.TextFormat.RichText)
+        zeitraum_info.setStyleSheet(
+            "background: #e8f4fb; border: 1px solid #b0d8f0; border-radius: 5px; "
+            "padding: 7px 12px; color: #1a4a6b; font-size: 11px;"
+        )
+        date_lay.addWidget(zeitraum_info)
         root.addWidget(date_sec)
 
         # ── Excel-Anhang ─────────────────────────────────────────────────────

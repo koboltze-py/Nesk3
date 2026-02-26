@@ -471,6 +471,7 @@ class UebergabeWidget(QWidget):
         self._btn_speichern.setFont(QFont("Arial", 11, QFont.Weight.Bold))
         self._btn_speichern.setFixedHeight(40)
         self._btn_speichern.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._btn_speichern.setToolTip("Protokoll zwischenspeichern – bleibt als 'offen' bearbeitbar")
         self._btn_speichern.setStyleSheet(f"""
             QPushButton {{
                 background-color: {FIORI_BLUE};
@@ -487,6 +488,10 @@ class UebergabeWidget(QWidget):
         self._btn_abschliessen.setFont(QFont("Arial", 11))
         self._btn_abschliessen.setFixedHeight(40)
         self._btn_abschliessen.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._btn_abschliessen.setToolTip(
+            "Protokoll endgültig abschließen. Danach ist keine Bearbeitung mehr möglich.\n"
+            "Ein Abzeichner-Name wird benötigt. Das Protokoll erhält den Status 'abgeschlossen'."
+        )
         self._btn_abschliessen.setStyleSheet(f"""
             QPushButton {{
                 background-color: {FIORI_SUCCESS};
@@ -503,6 +508,7 @@ class UebergabeWidget(QWidget):
         self._btn_email.setFont(QFont("Arial", 11))
         self._btn_email.setFixedHeight(40)
         self._btn_email.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._btn_email.setToolTip("Erstellt einen Outlook-Entwurf mit den Protokolldaten als E-Mail-Text")
         self._btn_email.setStyleSheet("""
             QPushButton {
                 background-color: #0078a8;
@@ -519,6 +525,7 @@ class UebergabeWidget(QWidget):
         self._btn_loeschen.setFont(QFont("Arial", 11))
         self._btn_loeschen.setFixedHeight(40)
         self._btn_loeschen.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._btn_loeschen.setToolTip("Dieses Protokoll dauerhaft aus der Datenbank löschen (nicht wiederherstellbar)")
         self._btn_loeschen.setStyleSheet(f"""
             QPushButton {{
                 background-color: #e0e0e0;
@@ -537,6 +544,20 @@ class UebergabeWidget(QWidget):
         btn_row.addStretch()
         btn_row.addWidget(self._btn_loeschen)
         layout.addLayout(btn_row)
+
+        abschluss_info = QLabel(
+            "ℹ️  <b>Speichern</b> = Entwurf, jederzeit bearbeitbar.  "
+            "<b>Abschließen</b> = endgültig abschließen (kein Bearbeiten mehr möglich) – "
+            "Abzeichner-Name wird benötigt.  "
+            "<b>E-Mail</b> = Outlook-Entwurf mit Protokollinhalt erstellen."
+        )
+        abschluss_info.setWordWrap(True)
+        abschluss_info.setTextFormat(Qt.TextFormat.RichText)
+        abschluss_info.setStyleSheet(
+            "background: #e8f4fb; border: 1px solid #b0d8f0; border-radius: 5px; "
+            "padding: 7px 12px; color: #1a4a6b; font-size: 11px;"
+        )
+        layout.addWidget(abschluss_info)
         layout.addStretch()
 
         scroll.setWidget(form_widget)
