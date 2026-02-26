@@ -355,11 +355,23 @@ class _Code19MailTab(QWidget):
         # ── Senden ────────────────────────────────────────────────────────────
         send_row = QHBoxLayout()
         send_row.addStretch()
-        btn_send = _btn("📧 Code 19 Mail erstellen")
-        btn_send.setMinimumWidth(240)
+
+        btn_send = _btn("📧 Entwurf (ohne Signatur)", "#6c757d", "#5a6268")
+        btn_send.setMinimumWidth(220)
         btn_send.setMinimumHeight(42)
+        btn_send.setToolTip("Erstellt einen Outlook-Entwurf ohne Ihre persönliche Signatur")
         btn_send.clicked.connect(self._send)
         send_row.addWidget(btn_send)
+
+        send_row.addSpacing(12)
+
+        btn_sig = _btn("📧 Mail mit Signatur senden")
+        btn_sig.setMinimumWidth(240)
+        btn_sig.setMinimumHeight(42)
+        btn_sig.setToolTip("Öffnet die Mail in Outlook mit Ihrer persönlichen Signatur (wie VBS-Script)")
+        btn_sig.clicked.connect(self._send_with_signature)
+        send_row.addWidget(btn_sig)
+
         root.addLayout(send_row)
         root.addStretch()
 
@@ -419,7 +431,46 @@ class _Code19MailTab(QWidget):
                 attachment_path=str(excel),
                 logo_path=_LOGO_PATH,
             )
-            QMessageBox.information(self, "Erfolg", "Outlook-Mail wurde geöffnet!\nBitte prüfen und absenden.")
+            QMessageBox.information(self, "Erfolg", "Outlook-Entwurf wurde erstellt!\nBitte prüfen und absenden.")
+        except Exception as exc:
+            QMessageBox.critical(
+                self, "Fehler",
+                f"Mail konnte nicht erstellt werden:\n{exc}\n\n"
+                "Stellen Sie sicher, dass Outlook installiert ist und pywin32 verfügbar ist."
+            )
+
+    def _send_with_signature(self):
+        """Erstellt Code-19-Mail mit Outlook-Signatur (analog zum VBS-Script)."""
+        von = self._von_date.date().toPython()
+        bis = self._bis_date.date().toPython()
+
+        if von > bis:
+            QMessageBox.warning(self, "Datum-Fehler", "Von-Datum darf nicht nach Bis-Datum liegen.")
+            return
+
+        excel = self._excel_path or Path(self._EXCEL_DEFAULT)
+
+        von_str = von.strftime("%d.%m.%Y")
+        bis_str = bis.strftime("%d.%m.%Y")
+        subject = f"Code 19-Liste vom {von_str} bis {bis_str}"
+
+        try:
+            from functions.mail_functions import create_code19_mail_with_signature
+            create_code19_mail_with_signature(
+                to=self._TO,
+                cc=self._CC,
+                subject=subject,
+                von_str=von_str,
+                bis_str=bis_str,
+                attachment_path=str(excel) if excel.exists() else None,
+            )
+            if not excel.exists():
+                QMessageBox.warning(
+                    self, "Anhang fehlt",
+                    f"Mail wurde geöffnet, aber die Excel-Datei wurde nicht gefunden:\n{excel}"
+                )
+            else:
+                QMessageBox.information(self, "Erfolg", "Outlook wurde geöffnet mit Ihrer Signatur!\nBitte prüfen und absenden.")
         except Exception as exc:
             QMessageBox.critical(
                 self, "Fehler",

@@ -77,3 +77,71 @@ def create_outlook_draft(
 
     mail.Display()
     return True
+
+
+def create_code19_mail_with_signature(
+    to: str,
+    cc: str,
+    subject: str,
+    von_str: str,
+    bis_str: str,
+    attachment_path: str | None = None,
+) -> bool:
+    """
+    Erstellt eine Code-19-Mail wie das VBS-Script:
+    - Signatur wird automatisch aus Outlook übernommen
+    - HTML-Body mit Adress-Footer wird vor die Signatur gesetzt
+    - Anhang wird eingefügt (falls vorhanden)
+
+    Parameters
+    ----------
+    to             : Empfänger
+    cc             : CC-Adressen
+    subject        : Betreff
+    von_str        : Von-Datum als String (dd.mm.yyyy)
+    bis_str        : Bis-Datum als String (dd.mm.yyyy)
+    attachment_path: Pfad zur Excel-Datei, optional
+    """
+    import win32com.client  # noqa
+
+    try:
+        outlook = win32com.client.GetActiveObject("Outlook.Application")
+    except Exception:
+        outlook = win32com.client.Dispatch("Outlook.Application")
+
+    mail = outlook.CreateItem(0)  # 0 = olMailItem
+
+    # Mail anzeigen damit Outlook die Standardsignatur lädt
+    mail.Display()
+    signature = mail.HTMLBody  # enthält jetzt die Outlook-Signatur
+
+    mail.To = to
+    mail.CC = cc
+    mail.Subject = subject
+
+    # HTML-Inhalt (analog zum VBS-Script)
+    body_html = (
+        "<html><head><meta http-equiv='Content-Type' content='text/html; charset=utf-8'></head>"
+        "<body style='font-family:Arial,sans-serif;font-size:12pt;color:#000;'>"
+        "<p>Sehr geehrte Frau Eichler,</p>"
+        f"<p>anbei die <strong>Code&nbsp;19-Liste</strong> vom {von_str} bis {bis_str}.</p>"
+        "<p>Mit freundlichen Grüßen<br>Ihr Team vom <strong>PRM-Service</strong></p>"
+        "<hr style='border:none;border-top:1px solid #cccccc;margin:16px 0;'>"
+        "<p><strong>Am Köln-Bonn-Airport</strong><br>"
+        "Kennedystraße<br>"
+        "51147 Köln<br>"
+        "Telefon: +49&nbsp;2203&nbsp;40&nbsp;–&nbsp;2323<br>"
+        "E-Mail: <a href='mailto:flughafen@drk-koeln.de'>flughafen@drk-koeln.de</a></p>"
+        "</body></html>"
+    )
+
+    # Neuen Inhalt + Outlook-Signatur zusammenführen
+    mail.HTMLBody = body_html + signature
+
+    if attachment_path:
+        from pathlib import Path as _Path
+        p = _Path(attachment_path)
+        if p.exists():
+            mail.Attachments.Add(str(p))
+
+    return True
