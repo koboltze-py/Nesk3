@@ -5,7 +5,62 @@ Format: `[Datum] Beschreibung – betroffene Dateien`
 
 ---
 
+## 26.02.2026 – v2.8
+
+### Code-19-Button: Uhr-Symbol
+- **`gui/main_window.py`** – NAV_ITEMS Code-19-Eintrag: Icon von `\ufffd` (defekt) auf `🕐` geändert
+
+### Dashboard: Animiertes Flugzeug-Widget
+- **`gui/dashboard.py`**
+  - Neue Klasse `_SkyWidget(QWidget)`: QPainter-Animation – Himmelsgradient, Wolken, Landebahn, fliegendes `✈`-Emoji (~33 FPS, QTimer 30ms)
+  - Neue Klasse `FlugzeugWidget(QFrame)`: Klickbare Karte mit hochzählendem Verspätungs-Ticker (jede Sekunde), `QMessageBox` beim Klick
+  - Import ergänzt: `QPainter, QLinearGradient, QColor, QEvent, QTimer, QMessageBox`
+
+### Code-19-Seite: Alice-im-Wunderland Taschenuhr
+- **`gui/code19.py`** – Komplett neu geschrieben
+  - Neue Klasse `_PocketWatchWidget(QWidget)` (240×300 px):
+    - `_swing_timer` (25 ms) → Pendelschwingung ±14° via `sin()`
+    - `_tick_timer` (1000 ms) → Sekundenzeiger-Ticking + Blink-Punkt
+    - `paintEvent`: Goldenes Gehäuse (Radial-Gradient), Kette, Krone, Zifferblatt, römische Ziffern (XII/III/VI/IX), Echtzeit-Uhrzeiger, roter Blink-Punkt
+  - Titelleiste: `🕐 Code 19`; Zitat: „Ich bin spät! Ich bin spät!"
+
+### Code-19-Mail Tab → Aufgaben Nacht
+- **`gui/aufgaben.py`** – Import `_Code19MailTab` aus `aufgaben_tag.py` + Tab 4 „📋 Code 19 Mail" in Aufgaben Nacht
+
+### Sonderaufgaben: E-Mobby Fahrer Erkennung
+- **`functions/emobby_functions.py`** – Neue Datei:
+  - `get_emobby_fahrer()`: Liest `Daten/E-Mobby/mobby.txt`, synct neue Namen in DB (`settings`-Tabelle, Key `emobby_fahrer`)
+  - `is_emobby_fahrer(name)`: Case-insensiver Substring-Match gegen DB-Liste
+  - `add_emobby_fahrer(name)`: Fügt Namen zur DB-JSON-Liste hinzu (Duplikat-Check)
+- **`gui/sonderaufgaben.py`**
+  - `_dienstplan_geladen: bool` Flag in `__init__` (wird nach Laden auf `True` gesetzt)
+  - E-Mobby-Combo: Zeigt ⚠ Warnung in Orange wenn Dienstplan geladen aber kein Fahrer erkannt
+  - Erfolgsdialog enthält jetzt E-Mobby-Anzahl pro Schicht
+  - Dienstplan-Abgleich: `tag_emobby` / `nacht_emobby` via `is_emobby_fahrer()`
+
+### Einstellungen: E-Mobby-Fahrer Verwaltung
+- **`gui/einstellungen.py`**
+  - `QListWidget` zu Imports ergänzt
+  - Neue GroupBox „🛵 E-Mobby Fahrer" mit:
+    - `QListWidget` zeigt aktuelle Einträge aus DB (33 Fahrer initial aus `mobby.txt`)
+    - `QLineEdit` + „+ Hinzufügen" Button (auch Enter-Taste)
+    - „🗑 Entfernen" Button für markierten Eintrag mit Bestätigungsdialog
+    - Zähler-Label
+  - Methoden: `_load_emobby_list()`, `_add_emobby_entry()`, `_remove_emobby_entry()`
+  - `_load_settings()` ruft `_load_emobby_list()` auf
+
+### Aufgaben Tag: Checklisten-Tab Symbol
+- **`gui/aufgaben_tag.py`** – Tab-Titel `"📋 Checklisten"` (Encoding-Fehler behoben)
+
+### Übergabe: Vereinfachung
+- **`gui/uebergabe.py`**
+  - Abschnitt „Personal im Dienst" komplett entfernt (Textfeld, Label, Formzeile)
+  - Beginn/Ende werden beim Klick auf Tagdienst/Nachtdienst-Button automatisch befüllt: Tag 07:00–19:00, Nacht 19:00–07:00
+
+---
+
 ## 25.02.2026
+
 
 ### Backup ZIP + Restore
 - **`backup/backup_manager.py`**

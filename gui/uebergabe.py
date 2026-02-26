@@ -321,14 +321,6 @@ class UebergabeWidget(QWidget):
 
         layout.addLayout(fl)
 
-        # Personal im Dienst
-        layout.addWidget(self._section_label("👥 Personal im Dienst"))
-        self._f_personal = QTextEdit()
-        self._f_personal.setPlaceholderText("Namen der diensthabenden Mitarbeiter (eine Person je Zeile)...")
-        self._f_personal.setFixedHeight(80)
-        self._f_personal.setStyleSheet(self._textarea_style())
-        layout.addWidget(self._f_personal)
-
         # Ereignisse / Vorfälle
         layout.addWidget(self._section_label("⚠ Ereignisse / Vorfälle"))
         self._f_ereignisse = QTextEdit()
@@ -523,7 +515,6 @@ class UebergabeWidget(QWidget):
         self._f_patienten.setValue(int(p.get("patienten_anzahl") or 0))
         self._f_ersteller.setText(p.get("ersteller", ""))
         self._f_abzeichner.setText(p.get("abzeichner", ""))
-        self._f_personal.setPlainText(p.get("personal", ""))
         self._f_ereignisse.setPlainText(p.get("ereignisse", ""))
         self._f_massnahmen.setPlainText(p.get("massnahmen", ""))
         self._f_notiz.setPlainText(p.get("uebergabe_notiz", ""))
@@ -535,8 +526,7 @@ class UebergabeWidget(QWidget):
 
         for w in [self._f_datum, self._f_beginn, self._f_ende,
                   self._f_patienten, self._f_ersteller, self._f_abzeichner,
-                  self._f_personal, self._f_ereignisse,
-                  self._f_massnahmen, self._f_notiz]:
+                  self._f_ereignisse, self._f_massnahmen, self._f_notiz]:
             w.setEnabled(not abges)
 
     def _neues_protokoll(self, typ: str):
@@ -553,22 +543,24 @@ class UebergabeWidget(QWidget):
         )
         self._form_titel.setStyleSheet(f"color: {farbe};")
 
-        # Felder leeren
+        # Felder leeren + Zeiten je nach Diensttyp vorbelegen
         self._f_datum.setDate(QDate.currentDate())
-        self._f_beginn.setText("")
-        self._f_ende.setText("")
+        if typ == "tagdienst":
+            self._f_beginn.setText("07:00")
+            self._f_ende.setText("19:00")
+        else:
+            self._f_beginn.setText("19:00")
+            self._f_ende.setText("07:00")
         self._f_patienten.setValue(0)
         self._f_ersteller.setText("")
         self._f_abzeichner.setText("")
-        self._f_personal.clear()
         self._f_ereignisse.clear()
         self._f_massnahmen.clear()
         self._f_notiz.clear()
 
         for w in [self._f_datum, self._f_beginn, self._f_ende,
                   self._f_patienten, self._f_ersteller, self._f_abzeichner,
-                  self._f_personal, self._f_ereignisse,
-                  self._f_massnahmen, self._f_notiz]:
+                  self._f_ereignisse, self._f_massnahmen, self._f_notiz]:
             w.setEnabled(True)
 
         self._btn_speichern.setEnabled(True)
@@ -584,7 +576,6 @@ class UebergabeWidget(QWidget):
             beginn_zeit      = self._f_beginn.text().strip(),
             ende_zeit        = self._f_ende.text().strip(),
             patienten_anzahl = self._f_patienten.value(),
-            personal         = self._f_personal.toPlainText().strip(),
             ereignisse       = self._f_ereignisse.toPlainText().strip(),
             massnahmen       = self._f_massnahmen.toPlainText().strip(),
             uebergabe_notiz  = self._f_notiz.toPlainText().strip(),

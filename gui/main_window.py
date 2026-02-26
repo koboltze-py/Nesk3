@@ -25,6 +25,7 @@ from gui.dienstplan    import DienstplanWidget
 from gui.uebergabe    import UebergabeWidget
 from gui.fahrzeuge    import FahrzeugeWidget
 from gui.einstellungen import EinstellungenWidget
+from gui.code19        import Code19Widget
 
 
 NAV_ITEMS = [
@@ -34,8 +35,9 @@ NAV_ITEMS = [
     ("📅", "Dienstplan",     3),
     ("📋", "Übergabe",       4),
     ("🚗", "Fahrzeuge",      5),
-    ("💾", "Backup",         6),
-    ("⚙️",  "Einstellungen", 7),
+    ("🕐", "Code 19",        6),
+    ("💾", "Backup",         7),
+    ("⚙️",  "Einstellungen", 8),
 ]
 
 
@@ -174,13 +176,14 @@ class MainWindow(QMainWindow):
         self._dienstplan_page    = DienstplanWidget()
         self._uebergabe_page     = UebergabeWidget()
         self._fahrzeuge_page     = FahrzeugeWidget()
+        self._code19_page        = Code19Widget()
         self._backup_page        = self._placeholder_page("💾 Backup", "Backup-Verwaltung wird implementiert.")
         self._settings_page      = EinstellungenWidget()
 
         for page in [self._dashboard_page, self._aufgaben_tag_page,
                      self._aufgaben_page, self._dienstplan_page,
                      self._uebergabe_page, self._fahrzeuge_page,
-                     self._backup_page, self._settings_page]:
+                     self._code19_page, self._backup_page, self._settings_page]:
             self._stack.addWidget(page)
 
         layout.addWidget(self._stack)
@@ -218,3 +221,5 @@ class MainWindow(QMainWindow):
             self._uebergabe_page.refresh()
         elif index == 5:
             self._fahrzeuge_page.refresh()
+        elif index == 6:
+            self._code19_page.refresh()

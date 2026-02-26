@@ -1,6 +1,6 @@
 # Nesk3 – Technische Dokumentation
 
-**Stand:** 25.02.2026  
+**Stand:** 26.02.2026  
 **Anwendung:** Nesk3 – DRK Flughafen Köln  
 **Zweck:** Dienstplan-Verwaltung, Stärkemeldung, Mitarbeiterverwaltung
 
@@ -28,30 +28,47 @@ Nesk3/
 │
 ├── gui/
 │   ├── main_window.py               # Hauptfenster, Tab-Navigation
-│   ├── dashboard.py                 # Dashboard-Tab (Statistik-Karten)
+│   ├── dashboard.py                 # Dashboard (Statistik-Karten, Flugzeug-Animation)
 │   ├── dienstplan.py                # Dienstplan-Tab (Excel-Import, Tabelle, Export)
+│   ├── aufgaben.py                  # Aufgaben Nacht (4 Tabs inkl. Code-19-Mail)
+│   ├── aufgaben_tag.py              # Aufgaben Tag (Code19Mail, FreieMail, Checklisten)
+│   ├── sonderaufgaben.py            # Sonderaufgaben (Bulmor, E-Mobby, Dienstplan-Abgleich)
+│   ├── uebergabe.py                 # Übergabe-Protokoll (auto Zeiten, kein Personal-Feld)
+│   ├── fahrzeuge.py                 # Fahrzeugverwaltung
+│   ├── code19.py                    # Code-19 (Taschenuhr-Animation, Protokoll)
 │   ├── mitarbeiter.py               # Mitarbeiter-Verwaltung
-│   ├── einstellungen.py             # Einstellungen
+│   ├── einstellungen.py             # Einstellungen (Pfade, E-Mobby-Fahrerverwaltung)
 │   └── checklisten.py               # Checklisten-Tab
 │
 ├── functions/
-│   ├── dienstplan_parser.py         # Excel-Parser (Kernlogik)
+│   ├── dienstplan_parser.py         # Excel-Parser (Kernlogik, Krank-Typen, Dispo-Abschnitt)
 │   ├── dienstplan_functions.py      # DB-Funktionen für Dienstplan
+│   ├── emobby_functions.py          # E-Mobby-Fahrerliste (TXT↔DB-Sync, Matching)
+│   ├── fahrzeug_functions.py        # DB-Funktionen für Fahrzeuge
+│   ├── mail_functions.py            # Outlook-COM-Integration
 │   ├── mitarbeiter_functions.py     # DB-Funktionen für Mitarbeiter
-│   ├── settings_functions.py        # Einstellungs-Funktionen
-│   └── staerkemeldung_export.py     # Word-Export Stärkemeldung
+│   ├── settings_functions.py        # Key-Value-Einstellungen (get/set)
+│   ├── staerkemeldung_export.py     # Word-Export Stärkemeldung
+│   └── uebergabe_functions.py       # DB-Funktionen für Übergabe-Protokolle
 │
 ├── database/
 │   ├── connection.py                # SQLite-Verbindung
 │   ├── models.py                    # ORM-Modelle
-│   └── migrations.py               # DB-Migrationen
+│   └── migrations.py               # DB-Migrationen (beim Start ausgeführt)
 │
 ├── backup/
 │   └── backup_manager.py            # JSON + ZIP Backup/Restore
 │
+├── Daten/
+│   └── E-Mobby/
+│       └── mobby.txt                # E-Mobby-Fahrerliste (ein Name/Zeile)
+│
+├── docs/                            # Reproduktions-Protokoll (NEU)
+│   ├── FUNKTIONEN.md                # Vollständige Funktionsübersicht aller Module
+│   └── REPRODUKTION.md              # Schritt-für-Schritt Neuerstellung
+│
 └── Backup Data/
-    ├── Nesk3_backup_YYYYMMDD_HHMMSS.zip   # Vollständige ZIP-Backups
-    └── db_backups/                         # SQLite-Datenbank-Backups
+    └── Nesk3_backup_YYYYMMDD_HHMMSS.zip   # Vollständige ZIP-Backups
 ```
 
 ---

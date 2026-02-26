@@ -6,12 +6,13 @@ import os
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QTabWidget, QPushButton, QLabel
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTabWidget, QPushButton, QLabel
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 
 from gui.checklisten    import ChecklistenWidget
 from gui.sonderaufgaben import SonderaufgabenWidget
+from gui.aufgaben_tag   import _Code19MailTab
 from config import FIORI_BLUE, FIORI_TEXT
 from functions.settings_functions import get_setting
 
@@ -102,33 +103,43 @@ class AufgabenWidget(QWidget):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
+        # ── Titel-Bar ──────────────────────────────────────────────────────
+        title_bar = QWidget()
+        title_bar.setStyleSheet("background-color: white; border-bottom: 1px solid #e0e0e0;")
+        title_bar.setFixedHeight(52)
+        title_layout = QHBoxLayout(title_bar)
+        title_layout.setContentsMargins(20, 0, 20, 0)
+        lbl = QLabel("🌙 Aufgaben Nacht")
+        lbl.setFont(QFont("Segoe UI", 16, QFont.Weight.Bold))
+        lbl.setStyleSheet(f"color: {FIORI_TEXT};")
+        title_layout.addWidget(lbl)
+        title_layout.addStretch()
+        root.addWidget(title_bar)
+
         # ── Tab-Widget ─────────────────────────────────────────────────────
         tabs = QTabWidget()
         tabs.setDocumentMode(False)
         tabs.setFont(QFont("Segoe UI", 11))
-        tabs.setStyleSheet(f"""
-            QTabWidget::pane {{
+        tabs.setStyleSheet("""
+            QTabWidget::pane {
                 border: none;
-                background: #f5f6f7;
-            }}
-            QTabBar::tab {{
-                background: #dce6f0;
-                color: {FIORI_TEXT};
-                padding: 10px 28px;
-                font-size: 12px;
+                background-color: #f5f6f7;
+            }
+            QTabBar::tab {
+                padding: 8px 20px;
+                background-color: #e8edf2;
+                border: none;
+                border-radius: 3px 3px 0 0;
+                margin-right: 2px;
+                font-size: 11pt;
+            }
+            QTabBar::tab:selected {
+                background-color: white;
                 font-weight: bold;
-                border: none;
-                border-top-left-radius: 6px;
-                border-top-right-radius: 6px;
-                margin-right: 3px;
-            }}
-            QTabBar::tab:selected {{
-                background: {FIORI_BLUE};
-                color: white;
-            }}
-            QTabBar::tab:hover:!selected {{
-                background: #b8cfe8;
-            }}
+            }
+            QTabBar::tab:hover {
+                background-color: #d0dae4;
+            }
         """)
 
         # Tab 1 – Checklisten
@@ -142,6 +153,10 @@ class AufgabenWidget(QWidget):
         # Tab 3 – AOCC Lagebericht
         self._aocc = _AoccWidget()
         tabs.addTab(self._aocc, "📣  AOCC Lagebericht")
+
+        # Tab 4 – Code 19 Mail
+        self._code19_mail = _Code19MailTab()
+        tabs.addTab(self._code19_mail, "📋  Code 19 Mail")
 
         self._tabs = tabs
         root.addWidget(tabs, 1)

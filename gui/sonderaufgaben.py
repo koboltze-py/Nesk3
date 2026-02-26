@@ -137,6 +137,7 @@ class SonderaufgabenWidget(QWidget):
         self._nacht_bulmor:      list[str] = []
         self._tag_emobby:        list[str] = []
         self._nacht_emobby:      list[str] = []
+        self._dienstplan_geladen: bool = False
         self._fs_model: QFileSystemModel | None = None
 
         self._build_ui()
@@ -453,6 +454,9 @@ class SonderaufgabenWidget(QWidget):
             combo.setStyleSheet(_combo_style())
             if mitarbeiter:
                 combo.addItems(["— bitte wählen —"] + mitarbeiter)
+            elif is_emobby and self._dienstplan_geladen:
+                combo.addItems(["⚠ Kein E-Mobby-Fahrer auf dieser Schicht – bitte prüfen!"])
+                combo.setStyleSheet(_combo_style() + "QComboBox { color: #cc6600; font-weight: bold; }")
             else:
                 combo.addItems(["— Dienstplan laden —"])
 
@@ -474,7 +478,8 @@ class SonderaufgabenWidget(QWidget):
 
     def _combo_to_line(self, key: str, choice: str):
         """Dropdown-Auswahl in Textfeld übertragen. Bulmor: mehrere mit / anhängen."""
-        if not choice or choice in ("— bitte wählen —", "— Dienstplan laden —"):
+        if not choice or choice in ("— bitte wählen —", "— Dienstplan laden —") \
+                or choice.startswith("⚠"):
             return
         entry = self._entries.get(key)
         if not entry:
@@ -607,9 +612,14 @@ class SonderaufgabenWidget(QWidget):
                     if is_bulmor and nachname not in nacht_bulmor:
                         nacht_bulmor.append(nachname)
 
-            # E-Mobby: noch kein DB-Support in Nesk3 → leere Liste
-            tag_emobby:   list[str] = []
-            nacht_emobby: list[str] = []
+            # E-Mobby: aus emobby_fahrer.txt + DB-Settings
+            try:
+                from functions.emobby_functions import is_emobby_fahrer
+                tag_emobby   = [m for m in tag_mitarbeiter   if is_emobby_fahrer(m)]
+                nacht_emobby = [m for m in nacht_mitarbeiter if is_emobby_fahrer(m)]
+            except Exception:
+                tag_emobby   = []
+                nacht_emobby = []
 
             self._tag_mitarbeiter   = tag_mitarbeiter
             self._nacht_mitarbeiter = nacht_mitarbeiter
@@ -617,6 +627,7 @@ class SonderaufgabenWidget(QWidget):
             self._nacht_bulmor      = nacht_bulmor
             self._tag_emobby        = tag_emobby
             self._nacht_emobby      = nacht_emobby
+            self._dienstplan_geladen = True
 
             # Formular neu aufbauen mit neuen Daten
             self._build_form()
@@ -624,9 +635,9 @@ class SonderaufgabenWidget(QWidget):
             QMessageBox.information(
                 self, "Dienstplan geladen",
                 f"Tagdienst: {len(tag_mitarbeiter)} Mitarbeiter "
-                f"({len(tag_bulmor)} Bulmor-Fahrer)\n"
+                f"({len(tag_bulmor)} Bulmor-Fahrer, {len(tag_emobby)} E-Mobby)\n"
                 f"Nachtdienst: {len(nacht_mitarbeiter)} Mitarbeiter "
-                f"({len(nacht_bulmor)} Bulmor-Fahrer)"
+                f"({len(nacht_bulmor)} Bulmor-Fahrer, {len(nacht_emobby)} E-Mobby)"
             )
 
         except Exception as exc:

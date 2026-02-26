@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QLineEdit, QFrame, QMessageBox, QFileDialog, QGroupBox
+    QLineEdit, QFrame, QMessageBox, QFileDialog, QGroupBox, QListWidget
 )
 from PySide6.QtGui import QFont
 from PySide6.QtCore import Qt
@@ -189,6 +189,125 @@ class EinstellungenWidget(QWidget):
 
         layout.addWidget(grp_aocc)
 
+        # ── Gruppe: Code 19 Datei ──────────────────────────────────────
+        grp_c19 = QGroupBox("🚨 Code 19 Datei")
+        grp_c19.setFont(QFont("Arial", 12, QFont.Weight.Bold))
+        grp_c19.setStyleSheet("""
+            QGroupBox {
+                border: 1px solid #dce8f5;
+                border-radius: 6px;
+                margin-top: 8px;
+                padding: 12px;
+                background-color: white;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 6px;
+                color: #0a5ba4;
+            }
+        """)
+        grp_c19_layout = QVBoxLayout(grp_c19)
+        grp_c19_layout.setSpacing(8)
+
+        c19_beschreibung = QLabel(
+            "Pfad zur Code-19-Excel-Datei (.xlsx).\n"
+            "Wird im Tab '🚨 Code 19' geöffnet."
+        )
+        c19_beschreibung.setWordWrap(True)
+        c19_beschreibung.setStyleSheet("color: #555; font-size: 11px; font-weight: normal;")
+        grp_c19_layout.addWidget(c19_beschreibung)
+
+        c19_row = QHBoxLayout()
+        self._c19_edit = QLineEdit()
+        self._c19_edit.setPlaceholderText("Pfad zur Code 19.xlsx …")
+        self._c19_edit.setMinimumHeight(32)
+        c19_row.addWidget(self._c19_edit, 1)
+
+        c19_browse_btn = QPushButton("📂 Durchsuchen")
+        c19_browse_btn.setMinimumHeight(32)
+        c19_browse_btn.clicked.connect(self._browse_c19)
+        c19_row.addWidget(c19_browse_btn)
+
+        grp_c19_layout.addLayout(c19_row)
+
+        self._c19_status = QLabel("")
+        self._c19_status.setStyleSheet("font-size: 10px; padding: 2px 0;")
+        grp_c19_layout.addWidget(self._c19_status)
+
+        self._c19_edit.textChanged.connect(self._validate_c19_path)
+
+        layout.addWidget(grp_c19)
+
+        # ── Gruppe: E-Mobby Fahrer ───────────────────────────────
+        grp_emobby = QGroupBox("🛥 E-Mobby Fahrer")
+        grp_emobby.setFont(QFont("Arial", 12, QFont.Weight.Bold))
+        grp_emobby.setStyleSheet("""
+            QGroupBox {
+                border: 1px solid #dce8f5;
+                border-radius: 6px;
+                margin-top: 8px;
+                padding: 12px;
+                background-color: white;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 6px;
+                color: #0a5ba4;
+            }
+        """)
+        grp_emobby_layout = QVBoxLayout(grp_emobby)
+        grp_emobby_layout.setSpacing(8)
+
+        emobby_desc = QLabel(
+            "Namen der Mitarbeiter, die E-Mobby fahren dürfen.\n"
+            "Beim Laden des Dienstplans werden diese automatisch erkannt."
+        )
+        emobby_desc.setWordWrap(True)
+        emobby_desc.setStyleSheet("color: #555; font-size: 11px; font-weight: normal;")
+        grp_emobby_layout.addWidget(emobby_desc)
+
+        self._emobby_list = QListWidget()
+        self._emobby_list.setFixedHeight(130)
+        self._emobby_list.setStyleSheet(
+            "border: 1px solid #c0c0c0; border-radius: 3px; "
+            "font-size: 12px; background: white;"
+        )
+        grp_emobby_layout.addWidget(self._emobby_list)
+
+        emobby_add_row = QHBoxLayout()
+        self._emobby_input = QLineEdit()
+        self._emobby_input.setPlaceholderText("Nachname eingeben …")
+        self._emobby_input.setMinimumHeight(32)
+        self._emobby_input.returnPressed.connect(self._add_emobby_entry)
+        emobby_add_row.addWidget(self._emobby_input, 1)
+
+        emobby_add_btn = QPushButton("+ Hinzufügen")
+        emobby_add_btn.setMinimumHeight(32)
+        emobby_add_btn.setStyleSheet(
+            f"background-color: #107e3e; color: white; border: none; "
+            f"border-radius: 3px; padding: 4px 12px; font-weight: bold;"
+        )
+        emobby_add_btn.clicked.connect(self._add_emobby_entry)
+        emobby_add_row.addWidget(emobby_add_btn)
+
+        emobby_remove_btn = QPushButton("🗑 Entfernen")
+        emobby_remove_btn.setMinimumHeight(32)
+        emobby_remove_btn.setStyleSheet(
+            "background-color: #e0e0e0; color: #555; border: none; "
+            "border-radius: 3px; padding: 4px 12px;"
+        )
+        emobby_remove_btn.clicked.connect(self._remove_emobby_entry)
+        emobby_add_row.addWidget(emobby_remove_btn)
+        grp_emobby_layout.addLayout(emobby_add_row)
+
+        self._emobby_count_lbl = QLabel("")
+        self._emobby_count_lbl.setStyleSheet("color: #555; font-size: 10px;")
+        grp_emobby_layout.addWidget(self._emobby_count_lbl)
+
+        layout.addWidget(grp_emobby)
+
         # ── Speichern-Button ───────────────────────────────────────────
         save_btn = QPushButton("💾 Einstellungen speichern")
         save_btn.setMinimumHeight(42)
@@ -210,8 +329,11 @@ class EinstellungenWidget(QWidget):
             self._ordner_edit.setText(get_setting('dienstplan_ordner'))
             self._sa_ordner_edit.setText(get_setting('sonderaufgaben_ordner'))
             self._aocc_edit.setText(get_setting('aocc_datei'))
+            self._c19_edit.setText(get_setting('code19_datei'))
         except Exception:
             pass
+        # E-Mobby Liste laden
+        self._load_emobby_list()
 
     def _validate_path(self, text: str):
         if not text.strip():
@@ -274,6 +396,85 @@ class EinstellungenWidget(QWidget):
         if path:
             self._aocc_edit.setText(path)
 
+    def _validate_c19_path(self, text: str):
+        if not text.strip():
+            self._c19_status.setText("")
+            return
+        if os.path.isfile(text.strip()):
+            self._c19_status.setText("✅ Datei gefunden")
+            self._c19_status.setStyleSheet("color: #107e3e; font-size: 10px; padding: 2px 0;")
+        else:
+            self._c19_status.setText("⚠️ Datei nicht gefunden")
+            self._c19_status.setStyleSheet("color: #bb6600; font-size: 10px; padding: 2px 0;")
+
+    def _browse_c19(self):
+        current = self._c19_edit.text().strip()
+        start_dir = os.path.dirname(current) if os.path.isfile(current) else os.path.expanduser("~")
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Code-19-Datei auswählen", start_dir,
+            "Excel-Dateien (*.xlsx *.xls)"
+        )
+        if path:
+            self._c19_edit.setText(path)
+
+    # ── E-Mobby Fahrer Verwaltung ────────────────────────────────
+
+    def _load_emobby_list(self):
+        try:
+            from functions.emobby_functions import get_emobby_fahrer
+            names = get_emobby_fahrer()
+        except Exception:
+            names = []
+        self._emobby_list.clear()
+        for n in names:
+            self._emobby_list.addItem(n)
+        self._emobby_count_lbl.setText(f"{len(names)} Fahrer in der Liste")
+
+    def _add_emobby_entry(self):
+        name = self._emobby_input.text().strip()
+        if not name:
+            return
+        try:
+            from functions.emobby_functions import add_emobby_fahrer
+            added = add_emobby_fahrer(name)
+            if added:
+                self._emobby_input.clear()
+                self._load_emobby_list()
+            else:
+                QMessageBox.information(self, "Bereits vorhanden",
+                    f"'{name}' ist bereits in der Liste.")
+        except Exception as e:
+            QMessageBox.critical(self, "Fehler", f"Fehler beim Hinzufügen:\n{e}")
+
+    def _remove_emobby_entry(self):
+        selected = self._emobby_list.currentItem()
+        if not selected:
+            QMessageBox.information(self, "Nichts ausgewählt",
+                "Bitte zuerst einen Namen in der Liste auswählen.")
+            return
+        name = selected.text()
+        antwort = QMessageBox.question(
+            self, "Entfernen",
+            f"'{name}' aus der E-Mobby-Liste entfernen?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        if antwort != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            import json
+            from functions.settings_functions import get_setting, set_setting
+            db_raw = get_setting('emobby_fahrer', '')
+            try:
+                db_names = json.loads(db_raw) if db_raw else []
+            except Exception:
+                db_names = []
+            if name in db_names:
+                db_names.remove(name)
+                set_setting('emobby_fahrer', json.dumps(db_names, ensure_ascii=False))
+            self._load_emobby_list()
+        except Exception as e:
+            QMessageBox.critical(self, "Fehler", f"Fehler beim Entfernen:\n{e}")
+
     def _save(self):
         ordner = self._ordner_edit.text().strip()
         sa_ordner = self._sa_ordner_edit.text().strip()
@@ -297,6 +498,7 @@ class EinstellungenWidget(QWidget):
             set_setting('dienstplan_ordner', ordner)
             set_setting('sonderaufgaben_ordner', sa_ordner)
             set_setting('aocc_datei', self._aocc_edit.text().strip())
+            set_setting('code19_datei', self._c19_edit.text().strip())
             QMessageBox.information(
                 self, "Gespeichert",
                 "✅ Einstellungen wurden gespeichert.\n\n"

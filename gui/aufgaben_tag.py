@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QLineEdit, QTextEdit, QTabWidget, QFileDialog,
     QMessageBox, QFrame, QDateEdit, QGroupBox, QSizePolicy,
-    QScrollArea,
+    QScrollArea, QCheckBox, QListWidget, QComboBox,
 )
 from PySide6.QtCore import Qt, QDate
 from PySide6.QtGui import QFont
@@ -103,6 +103,7 @@ class _FreieMailTab(QWidget):
         sec_recv_lay.setContentsMargins(12, 10, 12, 10)
         sec_recv_lay.addWidget(_label("📬 Empfänger", bold=True))
         self._to_edit = _line_edit("An: email@beispiel.de")
+        self._to_edit.setText("leitung.fb2@drk-koeln.de")
         self._cc_edit = _line_edit("CC: optional")
         self._subj_edit = _line_edit("Betreff")
         sec_recv_lay.addWidget(_label("An:"))
@@ -125,6 +126,22 @@ class _FreieMailTab(QWidget):
             "border: 1px solid #c0c0c0; border-radius: 3px; padding: 4px;"
         )
         sec_text_lay.addWidget(self._text_edit)
+
+        # Datum für Betreff / Template
+        date_row = QHBoxLayout()
+        date_row.setSpacing(8)
+        date_row.addWidget(_label("Datum für Betreff / Template:"))
+        self._tpl_date = QDateEdit()
+        self._tpl_date.setCalendarPopup(True)
+        self._tpl_date.setDate(QDate.currentDate())
+        self._tpl_date.setDisplayFormat("dd.MM.yyyy")
+        self._tpl_date.setFont(QFont("Segoe UI", 11))
+        self._tpl_date.setMinimumHeight(32)
+        self._tpl_date.setFixedWidth(150)
+        self._tpl_date.setStyleSheet("border: 1px solid #c0c0c0; border-radius: 3px; padding: 4px;")
+        date_row.addWidget(self._tpl_date)
+        date_row.addStretch()
+        sec_text_lay.addLayout(date_row)
 
         # Template-Buttons
         tpl_row = QHBoxLayout()
@@ -162,9 +179,27 @@ class _FreieMailTab(QWidget):
         att_row.addWidget(btn_clear)
         sec_att_lay.addLayout(att_row)
 
-        sec_att_lay.addWidget(_label("Dateiname (optional – umbenennen):"))
-        self._filename_edit = _line_edit("z.B. Checklisten_2026_02_26.pdf")
-        sec_att_lay.addWidget(self._filename_edit)
+        # Datei umbenennen (Datum-Picker)
+        rename_row = QHBoxLayout()
+        rename_row.setSpacing(8)
+        self._rename_chk = QCheckBox("Umbenennen zu Datum:")
+        self._rename_chk.setFont(QFont("Segoe UI", 11))
+        rename_row.addWidget(self._rename_chk)
+        self._rename_date = QDateEdit()
+        self._rename_date.setCalendarPopup(True)
+        self._rename_date.setDate(QDate.currentDate())
+        self._rename_date.setDisplayFormat("dd.MM.yyyy")
+        self._rename_date.setFont(QFont("Segoe UI", 11))
+        self._rename_date.setMinimumHeight(32)
+        self._rename_date.setFixedWidth(140)
+        self._rename_date.setStyleSheet("border: 1px solid #c0c0c0; border-radius: 3px; padding: 4px;")
+        rename_row.addWidget(self._rename_date)
+        self._rename_preview_lbl = _label("")
+        self._rename_preview_lbl.setStyleSheet("color: #555; font-style: italic;")
+        rename_row.addWidget(self._rename_preview_lbl, 1)
+        sec_att_lay.addLayout(rename_row)
+        self._rename_chk.toggled.connect(self._update_rename_preview)
+        self._rename_date.dateChanged.connect(self._update_rename_preview)
         layout.addWidget(sec_att)
 
         # ── Senden ─────────────────────────────────────────────────────────────
@@ -193,21 +228,29 @@ class _FreieMailTab(QWidget):
             self._selected_file = Path(path)
             self._file_lbl.setText(self._selected_file.name)
             self._file_lbl.setStyleSheet("color: #333;")
+            self._update_rename_preview()
 
     def _clear_file(self):
         self._selected_file = None
         self._file_lbl.setText("Keine Datei gewählt")
         self._file_lbl.setStyleSheet("color: #888;")
+        self._update_rename_preview()
+
+    def _update_rename_preview(self):
+        if self._rename_chk.isChecked() and self._selected_file:
+            d = self._rename_date.date().toPython()
+            suffix = self._selected_file.suffix
+            self._rename_preview_lbl.setText(f"→ {d.strftime('%Y_%m_%d')}{suffix}")
+        else:
+            self._rename_preview_lbl.setText("")
 
     def _apply_template(self, doc_type: str):
-        today = date.today().strftime("%d.%m.%Y")
-        today_fn = date.today().strftime("%Y_%m_%d")
-        self._subj_edit.setText(f"{doc_type} vom {today}")
+        d = self._tpl_date.date().toPython()
+        d_fmt = d.strftime("%d.%m.%Y")
+        self._subj_edit.setText(f"{doc_type} vom {d_fmt}")
         self._text_edit.setPlainText(
-            f"Hallo Herr Burghammer,\n\nanbei die {doc_type} vom {today}.\n\n\nMit freundlichen Grüßen"
+            f"Hallo Herr Burghammer,\n\nanbei die {doc_type} vom {d_fmt}.\n\n\nMit freundlichen Grüßen"
         )
-        if not self._filename_edit.text().strip():
-            self._filename_edit.setText(f"{today_fn}.pdf")
 
     def _send(self):
         to = self._to_edit.text().strip()
@@ -225,13 +268,12 @@ class _FreieMailTab(QWidget):
             QMessageBox.warning(self, "Pflichtfeld", "Bitte E-Mail-Text eingeben.")
             return
 
-        # Datei ggf. umbenennen
+        # Datei ggf. umbenennen (Datum-Format YYYY_MM_DD)
         attachment: str | None = None
         if self._selected_file:
-            new_name = self._filename_edit.text().strip()
-            if new_name:
-                if "." not in new_name:
-                    new_name += self._selected_file.suffix
+            if self._rename_chk.isChecked():
+                d = self._rename_date.date().toPython()
+                new_name = d.strftime("%Y_%m_%d") + self._selected_file.suffix
                 new_path = self._selected_file.parent / new_name
                 try:
                     shutil.copy2(str(self._selected_file), str(new_path))
@@ -243,21 +285,54 @@ class _FreieMailTab(QWidget):
                 attachment = str(self._selected_file)
 
         try:
-            from functions.mail_functions import create_outlook_draft
-            create_outlook_draft(
-                to=to,
-                subject=subj,
-                body_text=body,
-                cc=cc,
-                attachment_path=attachment,
-                logo_path=_LOGO_PATH,
+            import win32com.client
+            try:
+                outlook = win32com.client.GetActiveObject("Outlook.Application")
+            except Exception:
+                outlook = win32com.client.Dispatch("Outlook.Application")
+
+            mail = outlook.CreateItem(0)
+            mail.Display()          # lädt Signatur
+            signature = mail.HTMLBody
+
+            mail.To      = to
+            mail.CC      = cc
+            mail.Subject = subj
+
+            # Body als HTML – zeilenumbrüche bewahren
+            body_escaped = (
+                body.replace("&", "&amp;")
+                    .replace("<", "&lt;")
+                    .replace(">", "&gt;")
+                    .replace("\n", "<br>")
             )
-            QMessageBox.information(self, "Erfolg", "Outlook-Entwurf wurde geöffnet!\nBitte prüfen und ggf. absenden.")
+            body_html = (
+                "<html><head><meta http-equiv='Content-Type' "
+                "content='text/html; charset=utf-8'></head>"
+                "<body style='font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#000;'>"
+                f"{body_escaped}"
+                "</body></html>"
+            )
+            mail.HTMLBody = body_html + signature
+
+            if attachment:
+                att_path = Path(attachment)
+                if att_path.exists():
+                    mail.Attachments.Add(str(att_path))
+                else:
+                    QMessageBox.warning(
+                        self, "Anhang fehlt",
+                        f"Datei nicht gefunden:\n{att_path}\nMail wird ohne Anhang geöffnet."
+                    )
+
+            QMessageBox.information(self, "Erfolg", "Outlook wurde geöffnet mit Ihrer Signatur!\nBitte prüfen und absenden.")
+        except ImportError:
+            QMessageBox.critical(self, "Fehler", "pywin32 nicht installiert.\nBitte: pip install pywin32")
         except Exception as exc:
             QMessageBox.critical(
                 self, "Fehler",
                 f"Outlook-Entwurf konnte nicht erstellt werden:\n{exc}\n\n"
-                "Stellen Sie sicher, dass Outlook installiert ist und pywin32 verfügbar ist."
+                "Stellen Sie sicher, dass Outlook installiert ist."
             )
 
 
@@ -480,6 +555,191 @@ class _Code19MailTab(QWidget):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+#  Tab 3 – Stärkemeldung Mail
+# ─────────────────────────────────────────────────────────────────────────────
+class _StaerkemeldungTab(QWidget):
+    """Stärkemeldung-E-Mail mit Outlook-Signatur erstellen."""
+
+    _TO = "hildegard.eichler@koeln-bonn-airport.de; erste-hilfe-station-flughafen@drk-koeln.de"
+    _CC = "leitung.fb2@drk-koeln.de; verwaltung.fb2@drk-koeln.de; loahrs@gmx.de"
+
+    def __init__(self, parent: QWidget | None = None):
+        super().__init__(parent)
+        self._attachment_path: Path | None = None
+        self._build()
+
+    def _build(self):
+        root = QVBoxLayout(self)
+        root.setContentsMargins(16, 16, 16, 16)
+        root.setSpacing(12)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setStyleSheet("border: none;")
+        inner = QWidget()
+        layout = QVBoxLayout(inner)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(12)
+
+        # ── Info ─────────────────────────────────────────────────────────
+        info_sec = _section_frame()
+        info_lay = QVBoxLayout(info_sec)
+        info_lay.setContentsMargins(12, 10, 12, 10)
+        info_lay.addWidget(_label("📄 Stärkemeldung – E-Mail erstellen", bold=True, size=13))
+        info_lay.addWidget(_label(f"An: {self._TO}"))
+        info_lay.addWidget(_label(f"CC: {self._CC}"))
+        layout.addWidget(info_sec)
+
+        # ── Zeitraum ─────────────────────────────────────────────────────
+        date_sec = _section_frame()
+        date_lay = QVBoxLayout(date_sec)
+        date_lay.setContentsMargins(12, 10, 12, 10)
+        date_lay.addWidget(_label("📅 Zeitraum (für Betreff)", bold=True))
+
+        date_row = QHBoxLayout()
+        date_row.setSpacing(24)
+
+        von_grp = QVBoxLayout()
+        von_grp.addWidget(_label("Von:"))
+        self._s_von = QDateEdit()
+        self._s_von.setCalendarPopup(True)
+        self._s_von.setDate(QDate.currentDate())
+        self._s_von.setDisplayFormat("dd.MM.yyyy")
+        self._s_von.setFont(QFont("Segoe UI", 11))
+        self._s_von.setMinimumHeight(32)
+        self._s_von.setStyleSheet("border: 1px solid #c0c0c0; border-radius: 3px; padding: 4px;")
+        von_grp.addWidget(self._s_von)
+        date_row.addLayout(von_grp)
+
+        bis_grp = QVBoxLayout()
+        bis_grp.addWidget(_label("Bis:"))
+        self._s_bis = QDateEdit()
+        self._s_bis.setCalendarPopup(True)
+        self._s_bis.setDate(QDate.currentDate())
+        self._s_bis.setDisplayFormat("dd.MM.yyyy")
+        self._s_bis.setFont(QFont("Segoe UI", 11))
+        self._s_bis.setMinimumHeight(32)
+        self._s_bis.setStyleSheet("border: 1px solid #c0c0c0; border-radius: 3px; padding: 4px;")
+        bis_grp.addWidget(self._s_bis)
+        date_row.addLayout(bis_grp)
+        date_row.addStretch()
+        date_lay.addLayout(date_row)
+        layout.addWidget(date_sec)
+
+        # ── Anhang ────────────────────────────────────────────────────────
+        att_sec = _section_frame()
+        att_lay = QVBoxLayout(att_sec)
+        att_lay.setContentsMargins(12, 10, 12, 10)
+        att_lay.addWidget(_label("📎 Stärkemeldungs-Datei (Anhang)", bold=True))
+
+        att_row = QHBoxLayout()
+        att_row.setSpacing(8)
+        self._att_lbl = _label("Keine Datei gewählt")
+        self._att_lbl.setStyleSheet("color: #888;")
+        att_row.addWidget(self._att_lbl, 1)
+        btn_att = _btn("📁 Datei wählen", "#6c757d", "#5a6268")
+        btn_att.setFixedWidth(150)
+        btn_att.clicked.connect(self._pick_file)
+        att_row.addWidget(btn_att)
+        btn_clr = _btn("✕", "#dc3545", "#c82333")
+        btn_clr.setFixedWidth(40)
+        btn_clr.clicked.connect(self._clear_file)
+        att_row.addWidget(btn_clr)
+        att_lay.addLayout(att_row)
+        layout.addWidget(att_sec)
+
+        # ── Senden ────────────────────────────────────────────────────────
+        send_row = QHBoxLayout()
+        send_row.addStretch()
+        btn_send = _btn("📧 Mail mit Signatur erstellen")
+        btn_send.setMinimumWidth(260)
+        btn_send.setMinimumHeight(44)
+        btn_send.clicked.connect(self._send)
+        send_row.addWidget(btn_send)
+        layout.addLayout(send_row)
+        layout.addStretch()
+
+        scroll.setWidget(inner)
+        root.addWidget(scroll)
+
+    def _pick_file(self):
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Stärkemeldung wählen", "",
+            "Alle Dateien (*.*);;Word (*.docx *.doc);;PDF (*.pdf);;Excel (*.xlsx)"
+        )
+        if path:
+            self._attachment_path = Path(path)
+            self._att_lbl.setText(self._attachment_path.name)
+            self._att_lbl.setStyleSheet("color: #333;")
+
+    def _clear_file(self):
+        self._attachment_path = None
+        self._att_lbl.setText("Keine Datei gewählt")
+        self._att_lbl.setStyleSheet("color: #888;")
+
+    def _send(self):
+        von = self._s_von.date().toPython()
+        bis = self._s_bis.date().toPython()
+
+        if von > bis:
+            QMessageBox.warning(self, "Datum-Fehler", "Von-Datum darf nicht nach Bis-Datum liegen.")
+            return
+
+        von_str = von.strftime("%d.%m.%Y")
+        bis_str = bis.strftime("%d.%m.%Y")
+
+        if von == bis:
+            datum_text = von_str
+            subject = f"Stärkemeldung {von_str}"
+        else:
+            datum_text = f"{von_str} bis {bis_str}"
+            subject = f"Stärkemeldung {von_str} bis {bis_str}"
+
+        try:
+            import win32com.client
+            try:
+                outlook = win32com.client.GetActiveObject("Outlook.Application")
+            except Exception:
+                outlook = win32com.client.Dispatch("Outlook.Application")
+
+            mail = outlook.CreateItem(0)
+            mail.Display()  # lädt Signatur
+            signature = mail.HTMLBody
+
+            mail.To = self._TO
+            mail.CC = self._CC
+            mail.Subject = subject
+
+            body_html = (
+                "<html><head><meta http-equiv='Content-Type' content='text/html; charset=utf-8'></head>"
+                "<body style='font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#000;'>"
+                "<p>Sehr geehrte Frau Eichler,</p>"
+                f"<p>im Anhang die Stärkemeldung für den {datum_text}</p>"
+                "<p>mit freundlichen Grü&szlig;en</p>"
+                "</body></html>"
+            )
+            mail.HTMLBody = body_html + signature
+
+            if self._attachment_path and self._attachment_path.exists():
+                mail.Attachments.Add(str(self._attachment_path))
+            elif self._attachment_path:
+                QMessageBox.warning(
+                    self, "Anhang fehlt",
+                    f"Datei nicht gefunden:\n{self._attachment_path}\n\nMail wird ohne Anhang geöffnet."
+                )
+
+            QMessageBox.information(self, "Erfolg", "Outlook wurde geöffnet mit Ihrer Signatur!\nBitte prüfen und absenden.")
+        except ImportError:
+            QMessageBox.critical(self, "Fehler", "pywin32 nicht installiert.\nBitte: pip install pywin32")
+        except Exception as exc:
+            QMessageBox.critical(
+                self, "Fehler",
+                f"Mail konnte nicht erstellt werden:\n{exc}\n\n"
+                "Stellen Sie sicher, dass Outlook installiert ist."
+            )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 #  Haupt-Widget
 # ─────────────────────────────────────────────────────────────────────────────
 class AufgabenTagWidget(QWidget):
@@ -530,8 +790,9 @@ class AufgabenTagWidget(QWidget):
                 background-color: #d0dae4;
             }
         """)
-        tabs.addTab(_FreieMailTab(), "📧 E-Mail Entwurf")
+        tabs.addTab(_FreieMailTab(), "📋 Checklisten")
         tabs.addTab(_Code19MailTab(), "📋 Code 19 Mail")
+        tabs.addTab(_StaerkemeldungTab(), "📄 Stärkemeldung")
         layout.addWidget(tabs)
 
     def refresh(self):
