@@ -12,6 +12,7 @@ def create_outlook_draft(
     body_text: str,
     cc: str = "",
     attachment_path: str | None = None,
+    attachments: "list[str] | None" = None,
     logo_path: str | None = None,
 ) -> bool:
     """
@@ -74,6 +75,11 @@ def create_outlook_draft(
 
     if attachment_path:
         mail.Attachments.Add(str(attachment_path))
+
+    if attachments:
+        for _a in attachments:
+            if _a:
+                mail.Attachments.Add(str(_a))
 
     mail.Display()
     return True

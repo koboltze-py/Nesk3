@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QFrame, QScrollArea, QSplitter, QTextEdit, QLineEdit,
     QSpinBox, QComboBox, QFormLayout, QMessageBox, QSizePolicy,
-    QDateEdit
+    QDateEdit, QDialog, QDialogButtonBox, QListWidget, QFileDialog
 )
 from PySide6.QtCore import Qt, QDate
 from PySide6.QtGui import QFont, QColor
@@ -24,7 +24,16 @@ from config import (
 from functions.uebergabe_functions import (
     erstelle_protokoll, aktualisiere_protokoll,
     lade_protokolle, lade_protokoll_by_id, loesche_protokoll,
-    schliesse_protokoll_ab
+    schliesse_protokoll_ab,
+    speichere_fahrzeug_notizen, lade_fahrzeug_notizen,
+    speichere_handy_eintraege, lade_handy_eintraege,
+)
+from functions.fahrzeug_functions import (
+    lade_alle_fahrzeuge,
+    lade_termine as lade_fahrzeug_termine,
+    aktueller_status as aktueller_fahrzeug_status,
+    lade_schaeden_letzte_tage,
+    markiere_schaden_gesendet,
 )
 
 # ── Farben ──────────────────────────────────────────────────────────────────
@@ -92,6 +101,9 @@ class _ProtokolListItem(QFrame):
         layout.addLayout(top)
         layout.addWidget(datum_lbl)
 
+        # Suchtext für Filterung
+        self._search_text = f"{datum_str} {datum} {erstell} {label} {typ} {status}"
+
     def _apply_style(self, active: bool):
         if active:
             self.setStyleSheet(f"""
@@ -129,6 +141,11 @@ class UebergabeWidget(QWidget):
         self._ist_neu = False
         self._aktueller_typ = "tagdienst"
         self._list_items: dict[int, "_ProtokolListItem"] = {}
+        _today = date.today()
+        self._nav_jahr  = _today.year
+        self._nav_monat = _today.month
+        self._fahrzeug_notiz_widgets: dict = {}
+        self._handy_eintraege_widgets: list = []  # list of (nr_edit, notiz_edit)
         self._build_ui()
         self.refresh()
 
@@ -166,6 +183,19 @@ class UebergabeWidget(QWidget):
         title.setStyleSheet("color: white;")
         layout.addWidget(title)
         layout.addStretch()
+
+        # Aktualisieren
+        btn_refresh = QPushButton("🔄 Aktualisieren")
+        btn_refresh.setFont(QFont("Arial", 10))
+        btn_refresh.setFixedHeight(36)
+        btn_refresh.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_refresh.setStyleSheet(
+            "QPushButton{background:#fff;color:#333;border:1px solid #ccc;"
+            "border-radius:4px;padding:2px 14px;font-weight:bold;}"
+            "QPushButton:hover{background:#e8eaf0;}"
+        )
+        btn_refresh.clicked.connect(self.refresh)
+        layout.addWidget(btn_refresh)
 
         # Neues Tagdienst-Protokoll
         btn_tag = QPushButton("☀  Neues Tagdienst-Protokoll")
@@ -215,6 +245,36 @@ class UebergabeWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
+        # Monats-Navigation
+        nav_bar = QFrame()
+        nav_bar.setStyleSheet("background-color: #e8eaf0; border-bottom: 1px solid #c5c8d4;")
+        nav_bar.setFixedHeight(40)
+        nl = QHBoxLayout(nav_bar)
+        nl.setContentsMargins(6, 4, 6, 4)
+        nl.setSpacing(4)
+        self._btn_nav_prev = QPushButton("◄")
+        self._btn_nav_prev.setFixedSize(28, 28)
+        self._btn_nav_prev.setStyleSheet(
+            "QPushButton{background:#fff;border:1px solid #bbb;border-radius:4px;font-size:11px;}"
+            "QPushButton:hover{background:#d0d4e8;}"
+        )
+        self._btn_nav_prev.clicked.connect(self._nav_prev_monat)
+        self._lbl_nav_monat = QLabel()
+        self._lbl_nav_monat.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._lbl_nav_monat.setFont(QFont("Arial", 10, QFont.Weight.Bold))
+        self._lbl_nav_monat.setStyleSheet("border: none; color: #333;")
+        self._btn_nav_next = QPushButton("►")
+        self._btn_nav_next.setFixedSize(28, 28)
+        self._btn_nav_next.setStyleSheet(
+            "QPushButton{background:#fff;border:1px solid #bbb;border-radius:4px;font-size:11px;}"
+            "QPushButton:hover{background:#d0d4e8;}"
+        )
+        self._btn_nav_next.clicked.connect(self._nav_next_monat)
+        nl.addWidget(self._btn_nav_prev)
+        nl.addWidget(self._lbl_nav_monat, 1)
+        nl.addWidget(self._btn_nav_next)
+        layout.addWidget(nav_bar)
+
         # Filter-Leiste
         filter_bar = QFrame()
         filter_bar.setStyleSheet("background-color: #f0f2f4; border-bottom: 1px solid #ddd;")
@@ -229,6 +289,26 @@ class UebergabeWidget(QWidget):
         fl.addWidget(QLabel("Anzeigen:"))
         fl.addWidget(self._filter_combo, 1)
         layout.addWidget(filter_bar)
+
+        # Suchleiste
+        suche_bar = QFrame()
+        suche_bar.setStyleSheet("background: #f8f9fb; border-bottom: 1px solid #ddd;")
+        suche_bar.setFixedHeight(40)
+        sl = QHBoxLayout(suche_bar)
+        sl.setContentsMargins(8, 4, 8, 4)
+        sl.setSpacing(6)
+        suche_icon = QLabel("🔍")
+        suche_icon.setStyleSheet("border:none; font-size:13px;")
+        self._ue_search = QLineEdit()
+        self._ue_search.setPlaceholderText("Datum, Ersteller, Typ ...")
+        self._ue_search.setStyleSheet(
+            "background:white; border:1px solid #ccc; border-radius:3px;"
+            "padding:3px 8px; font-size:11px;"
+        )
+        self._ue_search.textChanged.connect(self._apply_protokoll_filter)
+        sl.addWidget(suche_icon)
+        sl.addWidget(self._ue_search, 1)
+        layout.addWidget(suche_bar)
 
         # Scrollbare Liste
         scroll = QScrollArea()
@@ -329,13 +409,39 @@ class UebergabeWidget(QWidget):
         self._f_ereignisse.setStyleSheet(self._textarea_style())
         layout.addWidget(self._f_ereignisse)
 
-        # Maßnahmen / Behandlungen
-        layout.addWidget(self._section_label("🩺 Maßnahmen / Behandlungen"))
-        self._f_massnahmen = QTextEdit()
-        self._f_massnahmen.setPlaceholderText("Durchgeführte Maßnahmen, Behandlungen ...")
-        self._f_massnahmen.setFixedHeight(110)
-        self._f_massnahmen.setStyleSheet(self._textarea_style())
-        layout.addWidget(self._f_massnahmen)
+        # Fahrzeuge
+        layout.addWidget(self._section_label("🚗 Fahrzeuge"))
+        self._fahrzeug_section = QFrame()
+        self._fahrzeug_section.setStyleSheet("QFrame { border: none; }")
+        self._fahrzeug_section_layout = QVBoxLayout(self._fahrzeug_section)
+        self._fahrzeug_section_layout.setContentsMargins(0, 0, 0, 0)
+        self._fahrzeug_section_layout.setSpacing(4)
+        _hint = QLabel("👁 Fahrzeuge werden beim Öffnen eines Protokolls geladen")
+        _hint.setStyleSheet("color: #aaa; font-size: 10px; border: none;")
+        self._fahrzeug_section_layout.addWidget(_hint)
+        layout.addWidget(self._fahrzeug_section)
+
+        # Handys
+        layout.addWidget(self._section_label("📱 Handys"))
+        self._handy_section = QFrame()
+        self._handy_section.setStyleSheet("QFrame { border: none; }")
+        self._handy_section_layout = QVBoxLayout(self._handy_section)
+        self._handy_section_layout.setContentsMargins(0, 0, 0, 0)
+        self._handy_section_layout.setSpacing(4)
+        _handy_hint = QLabel("👁 Noch keine Geräte eingetragen")
+        _handy_hint.setStyleSheet("color: #aaa; font-size: 10px; border: none;")
+        self._handy_section_layout.addWidget(_handy_hint)
+        layout.addWidget(self._handy_section)
+        self._btn_add_handy = QPushButton("➕ Gerät hinzufügen")
+        self._btn_add_handy.setFixedHeight(28)
+        self._btn_add_handy.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._btn_add_handy.setStyleSheet(
+            "QPushButton{background:#eef4fa;border:1px solid #b0c8e8;"
+            "border-radius:4px;padding:2px 10px;color:#0a6ed1;font-size:11px;}"
+            "QPushButton:hover{background:#d0e4f5;}"
+        )
+        self._btn_add_handy.clicked.connect(self._add_handy_row)
+        layout.addWidget(self._btn_add_handy)
 
         # Übergabe-Notiz
         layout.addWidget(self._section_label("📝 Übergabe-Notiz (für die Folgeschicht)"))
@@ -383,6 +489,22 @@ class UebergabeWidget(QWidget):
         self._btn_abschliessen.clicked.connect(self._abschliessen)
         self._btn_abschliessen.setEnabled(False)
 
+        self._btn_email = QPushButton("📧  E-Mail")
+        self._btn_email.setFont(QFont("Arial", 11))
+        self._btn_email.setFixedHeight(40)
+        self._btn_email.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._btn_email.setStyleSheet("""
+            QPushButton {
+                background-color: #0078a8;
+                color: white; border: none;
+                border-radius: 4px; padding: 4px 20px;
+            }
+            QPushButton:hover { background-color: #005f8a; }
+            QPushButton:disabled { background-color: #ccc; color: #999; }
+        """)
+        self._btn_email.clicked.connect(self._email_erstellen)
+        self._btn_email.setEnabled(False)
+
         self._btn_loeschen = QPushButton("🗑  Löschen")
         self._btn_loeschen.setFont(QFont("Arial", 11))
         self._btn_loeschen.setFixedHeight(40)
@@ -401,6 +523,7 @@ class UebergabeWidget(QWidget):
 
         btn_row.addWidget(self._btn_speichern)
         btn_row.addWidget(self._btn_abschliessen)
+        btn_row.addWidget(self._btn_email)
         btn_row.addStretch()
         btn_row.addWidget(self._btn_loeschen)
         layout.addLayout(btn_row)
@@ -442,10 +565,12 @@ class UebergabeWidget(QWidget):
             if item.widget():
                 item.widget().deleteLater()
 
+        self._update_nav_label()
         filter_idx = self._filter_combo.currentIndex()
         typ_filter = {0: None, 1: "tagdienst", 2: "nachtdienst"}.get(filter_idx)
 
-        protokolle = lade_protokolle(schicht_typ=typ_filter, limit=80)
+        monat_str = f"{self._nav_jahr}-{self._nav_monat:02d}"
+        protokolle = lade_protokolle(schicht_typ=typ_filter, monat=monat_str)
 
         self._list_items.clear()
 
@@ -468,9 +593,40 @@ class UebergabeWidget(QWidget):
                 self._liste_layout.count() - 1,  # vor dem Stretch
                 item
             )
+        self._apply_protokoll_filter()
+
+    def _apply_protokoll_filter(self):
+        """Filtert die Protokollliste nach dem eingegebenen Suchtext."""
+        text = self._ue_search.text().strip().lower()
+        for pid, item in self._list_items.items():
+            if not text:
+                item.setVisible(True)
+            else:
+                item.setVisible(text in getattr(item, "_search_text", "").lower())
 
     # ── Item-Auswahl ────────────────────────────────────────────────────────────
+    def _nav_prev_monat(self):
+        if self._nav_monat == 1:
+            self._nav_monat = 12
+            self._nav_jahr -= 1
+        else:
+            self._nav_monat -= 1
+        self._lade_liste()
 
+    def _nav_next_monat(self):
+        if self._nav_monat == 12:
+            self._nav_monat = 1
+            self._nav_jahr += 1
+        else:
+            self._nav_monat += 1
+        self._lade_liste()
+
+    def _update_nav_label(self):
+        _MONATE = ["", "Januar", "Februar", "März", "April", "Mai", "Juni",
+                   "Juli", "August", "September", "Oktober", "November", "Dezember"]
+        self._lbl_nav_monat.setText(
+            f"{_MONATE[self._nav_monat]} {self._nav_jahr}"
+        )
     def _item_clicked(self, protokoll_id: int):
         """Item in der Liste anklicken: altes deaktivieren, neues aktivieren."""
         for pid, itm in self._list_items.items():
@@ -516,18 +672,25 @@ class UebergabeWidget(QWidget):
         self._f_ersteller.setText(p.get("ersteller", ""))
         self._f_abzeichner.setText(p.get("abzeichner", ""))
         self._f_ereignisse.setPlainText(p.get("ereignisse", ""))
-        self._f_massnahmen.setPlainText(p.get("massnahmen", ""))
         self._f_notiz.setPlainText(p.get("uebergabe_notiz", ""))
+        self._rebuild_fahrzeug_section(protokoll_id)
+        self._rebuild_handy_section(protokoll_id)
 
         abges = (status == "abgeschlossen")
         self._btn_speichern.setEnabled(not abges)
         self._btn_abschliessen.setEnabled(not abges)
         self._btn_loeschen.setEnabled(True)
+        self._btn_email.setEnabled(True)
 
         for w in [self._f_datum, self._f_beginn, self._f_ende,
                   self._f_patienten, self._f_ersteller, self._f_abzeichner,
-                  self._f_ereignisse, self._f_massnahmen, self._f_notiz]:
+                  self._f_ereignisse, self._f_notiz, self._btn_add_handy]:
             w.setEnabled(not abges)
+        for w in self._fahrzeug_notiz_widgets.values():
+            w.setEnabled(not abges)
+        for nr, notiz in self._handy_eintraege_widgets:
+            nr.setEnabled(not abges)
+            notiz.setEnabled(not abges)
 
     def _neues_protokoll(self, typ: str):
         """Öffnet ein leeres Formular für ein neues Protokoll."""
@@ -555,17 +718,21 @@ class UebergabeWidget(QWidget):
         self._f_ersteller.setText("")
         self._f_abzeichner.setText("")
         self._f_ereignisse.clear()
-        self._f_massnahmen.clear()
         self._f_notiz.clear()
+        self._rebuild_fahrzeug_section(None)
+        self._rebuild_handy_section(None)
 
         for w in [self._f_datum, self._f_beginn, self._f_ende,
                   self._f_patienten, self._f_ersteller, self._f_abzeichner,
-                  self._f_ereignisse, self._f_massnahmen, self._f_notiz]:
+                  self._f_ereignisse, self._f_notiz, self._btn_add_handy]:
+            w.setEnabled(True)
+        for w in self._fahrzeug_notiz_widgets.values():
             w.setEnabled(True)
 
         self._btn_speichern.setEnabled(True)
         self._btn_abschliessen.setEnabled(False)
         self._btn_loeschen.setEnabled(False)
+        self._btn_email.setEnabled(False)
 
     # ── Aktionen ───────────────────────────────────────────────────────────────
 
@@ -577,7 +744,6 @@ class UebergabeWidget(QWidget):
             ende_zeit        = self._f_ende.text().strip(),
             patienten_anzahl = self._f_patienten.value(),
             ereignisse       = self._f_ereignisse.toPlainText().strip(),
-            massnahmen       = self._f_massnahmen.toPlainText().strip(),
             uebergabe_notiz  = self._f_notiz.toPlainText().strip(),
             ersteller        = self._f_ersteller.text().strip(),
         )
@@ -593,6 +759,7 @@ class UebergabeWidget(QWidget):
                 self._ist_neu = False
                 self._btn_abschliessen.setEnabled(True)
                 self._btn_loeschen.setEnabled(True)
+                self._btn_email.setEnabled(True)
                 QMessageBox.information(
                     self, "Gespeichert",
                     f"Protokoll #{new_id} wurde erfolgreich gespeichert."
@@ -613,6 +780,19 @@ class UebergabeWidget(QWidget):
             return
 
         self._lade_liste()
+        # Notizen + Handy-Einträge speichern
+        if self._aktives_protokoll_id:
+            notizen_fz = {
+                fid: w.text().strip()
+                for fid, w in self._fahrzeug_notiz_widgets.items()
+            }
+            speichere_fahrzeug_notizen(self._aktives_protokoll_id, notizen_fz)
+            eintraege_handy = [
+                (nr.text().strip(), notiz.text().strip())
+                for nr, notiz in self._handy_eintraege_widgets
+                if nr.text().strip()
+            ]
+            speichere_handy_eintraege(self._aktives_protokoll_id, eintraege_handy)
 
     def _abschliessen(self):
         if self._aktives_protokoll_id is None:
@@ -661,6 +841,518 @@ class UebergabeWidget(QWidget):
         self._btn_abschliessen.setEnabled(False)
         self._btn_loeschen.setEnabled(False)
         self._lade_liste()
+
+    # ── Fahrzeug-Sektion dynamisch aufbauen ────────────────────────────────────
+
+    def _rebuild_fahrzeug_section(self, protokoll_id):
+        """Baut die Fahrzeug-Liste im Formular neu auf."""
+        # Alte Widgets entfernen
+        while self._fahrzeug_section_layout.count():
+            item = self._fahrzeug_section_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        self._fahrzeug_notiz_widgets.clear()
+
+        fahrzeuge = lade_alle_fahrzeuge(nur_aktive=True)
+        if not fahrzeuge:
+            lbl = QLabel("Keine aktiven Fahrzeuge vorhanden")
+            lbl.setStyleSheet("color:#aaa;font-size:10px;border:none;")
+            self._fahrzeug_section_layout.addWidget(lbl)
+            return
+
+        existing = lade_fahrzeug_notizen(protokoll_id) if protokoll_id else {}
+
+        _STAT_LABELS = {
+            "fahrbereit":   "✅ Fahrbereit",
+            "defekt":        "❌ Defekt",
+            "werkstatt":     "🔧 Werkstatt",
+            "ausser_dienst": "⛔ Außer Dienst",
+            "sonstiges":     "ℹ Sonstiges",
+        }
+        _STAT_COLORS = {
+            "fahrbereit":   "#2e7d32",
+            "defekt":        "#c62828",
+            "werkstatt":     "#e65100",
+            "ausser_dienst": "#616161",
+            "sonstiges":     "#1565c0",
+        }
+
+        for f in fahrzeuge:
+            fid  = f["id"]
+            kz   = f.get("kennzeichen", "?")
+            typ  = f.get("typ", "")
+
+            stat     = aktueller_fahrzeug_status(fid)
+            stat_key = (stat.get("status", "fahrbereit") if stat else "fahrbereit")
+            stat_lbl = _STAT_LABELS.get(stat_key, stat_key)
+            stat_col = _STAT_COLORS.get(stat_key, "#555")
+
+            termine       = lade_fahrzeug_termine(fid)
+            offene_termin = [t for t in termine if not t.get("erledigt")]
+
+            frame = QFrame()
+            frame.setStyleSheet(
+                "QFrame{background:#fafafa;border:1px solid #e0e0e0;border-radius:4px;}"
+            )
+            fl = QVBoxLayout(frame)
+            fl.setContentsMargins(8, 6, 8, 6)
+            fl.setSpacing(3)
+
+            # Zeile 1: Kennzeichen | Typ | Status
+            top = QHBoxLayout()
+            kz_w = QLabel(f"<b>{kz}</b>")
+            kz_w.setStyleSheet("border:none;color:#333;")
+            typ_w = QLabel(typ)
+            typ_w.setStyleSheet("border:none;color:#777;font-size:10px;")
+            st_w = QLabel(stat_lbl)
+            st_w.setStyleSheet(
+                f"border:none;color:{stat_col};font-size:10px;font-weight:bold;"
+            )
+            top.addWidget(kz_w)
+            top.addSpacing(6)
+            top.addWidget(typ_w)
+            top.addStretch()
+            top.addWidget(st_w)
+            fl.addLayout(top)
+
+            # Zeile 2: nächster offener Termin
+            if offene_termin:
+                t = offene_termin[0]
+                t_lbl = QLabel(
+                    f"📅 {t.get('datum','')}  {t.get('titel','')}"
+                )
+                t_lbl.setStyleSheet(
+                    "border:none;color:#e65100;font-size:10px;"
+                )
+                fl.addWidget(t_lbl)
+
+            # Zeile 3: Notiz-Eingabe
+            nr = QHBoxLayout()
+            nl = QLabel("Notiz:")
+            nl.setStyleSheet("border:none;color:#555;font-size:10px;")
+            nl.setFixedWidth(42)
+            ne = QLineEdit()
+            ne.setPlaceholderText(f"Notiz zu {kz} ...")
+            ne.setStyleSheet(
+                "border:1px solid #ccc;border-radius:3px;"
+                "padding:2px 6px;font-size:11px;background:white;"
+            )
+            ne.setText(existing.get(fid, ""))
+            nr.addWidget(nl)
+            nr.addWidget(ne)
+            fl.addLayout(nr)
+
+            self._fahrzeug_notiz_widgets[fid] = ne
+            self._fahrzeug_section_layout.addWidget(frame)
+
+    # ── E-Mail Dialog ──────────────────────────────────────────────────────────
+
+    def _email_erstellen(self):
+        """Öffnet einen Dialog zum Erstellen einer Übergabe-E-Mail in Outlook."""
+        from PySide6.QtWidgets import QCheckBox, QScrollArea as _QSA
+
+        # ── Protokoll-Daten ───────────────────────────────────────────────────
+        typ_label  = "Tagdienst ☀" if self._aktueller_typ == "tagdienst" else "Nachtdienst 🌙"
+        datum      = self._f_datum.date().toString("dd.MM.yyyy")
+        beginn     = self._f_beginn.text().strip()
+        ende       = self._f_ende.text().strip()
+        ersteller  = self._f_ersteller.text().strip()
+        abzeichner = self._f_abzeichner.text().strip()
+        patienten  = self._f_patienten.value()
+        ereignisse = self._f_ereignisse.toPlainText().strip()
+        ue_notiz   = self._f_notiz.toPlainText().strip()
+        pid        = self._aktives_protokoll_id
+
+        betreff = (
+            f"Übergabeprotokoll #{pid} – {typ_label} – {datum}"
+            if pid else
+            f"Übergabeprotokoll – {typ_label} – {datum}"
+        )
+
+        # ── Fahrzeugstatus ────────────────────────────────────────────────────
+        _STAT_LABELS = {
+            "fahrbereit":    "✅ Fahrbereit",
+            "defekt":        "❌ Defekt",
+            "werkstatt":     "🔧 Werkstatt",
+            "ausser_dienst": "⛔ Außer Dienst",
+            "sonstiges":     "ℹ Sonstiges",
+        }
+        try:
+            alle_fz = lade_alle_fahrzeuge(nur_aktive=True)
+            fz_map  = {f["id"]: f for f in lade_alle_fahrzeuge()}
+        except Exception:
+            alle_fz = []
+            fz_map  = {}
+
+        nicht_fb: list[tuple] = []
+        for fz in alle_fz:
+            fid  = fz["id"]
+            stat = aktueller_fahrzeug_status(fid)
+            sk   = stat.get("status", "fahrbereit") if stat else "fahrbereit"
+            if sk != "fahrbereit":
+                nicht_fb.append((fz.get("kennzeichen", "?"), sk,
+                                  stat.get("grund", "") if stat else ""))
+
+        # ── Schäden letzte 7 Tage ─────────────────────────────────────────────
+        try:
+            all_schaeden = lade_schaeden_letzte_tage(7)
+        except Exception:
+            all_schaeden = []
+
+        offene_schaeden  = [s for s in all_schaeden if not s.get("gesendet")]
+        bereits_gesendet = [s for s in all_schaeden if s.get("gesendet")]
+
+        # ── E-Mail Body aufbauen ──────────────────────────────────────────────
+        lines: list[str] = [
+            f"Übergabeprotokoll – {typ_label}",
+            "=" * 45,
+            f"Datum:      {datum}",
+            f"Schicht:    {beginn} – {ende}",
+            f"Ersteller:  {ersteller}" + (f"   |   Abzeichner: {abzeichner}" if abzeichner else ""),
+            f"Patienten:  {patienten}",
+            "",
+        ]
+        if ereignisse:
+            lines += ["Ereignisse / Vorfälle:", ereignisse, ""]
+
+        if alle_fz:
+            lines.append("Fahrzeuge:")
+            for fz in alle_fz:
+                fid   = fz["id"]
+                kz    = fz.get("kennzeichen", "?")
+                stat  = aktueller_fahrzeug_status(fid)
+                sk    = stat.get("status", "fahrbereit") if stat else "fahrbereit"
+                slbl  = _STAT_LABELS.get(sk, sk)
+                ne    = self._fahrzeug_notiz_widgets.get(fid)
+                notiz = ne.text().strip() if ne else ""
+                hint  = f" [{slbl}]" if sk != "fahrbereit" else ""
+                grund = f" – {stat['grund']}" if (sk != "fahrbereit" and stat and stat.get("grund")) else ""
+                lines.append(f"  • {kz}{hint}{grund}" + (f": {notiz}" if notiz else ""))
+            if nicht_fb:
+                lines.append("")
+                lines.append("⚠ ACHTUNG – Nicht fahrbereite Fahrzeuge:")
+                for kz, sk, grund in nicht_fb:
+                    lines.append(f"  • {kz}: {_STAT_LABELS.get(sk, sk)}"
+                                  + (f" ({grund})" if grund else ""))
+            lines.append("")
+
+        handy_rows = [
+            (nr.text().strip(), nt.text().strip())
+            for nr, nt in self._handy_eintraege_widgets
+            if nr.text().strip()
+        ]
+        if handy_rows:
+            lines.append("Handys / Geräte:")
+            for nr_t, nt_t in handy_rows:
+                lines.append(f"  • Gerät {nr_t}" + (f": {nt_t}" if nt_t else ""))
+            lines.append("")
+
+        if ue_notiz:
+            lines += ["Übergabe-Notiz für die Folgeschicht:", ue_notiz, ""]
+
+        body_pre = "\n".join(lines)
+
+        # ── Dialog ────────────────────────────────────────────────────────────
+        dlg = QDialog(self)
+        dlg.setWindowTitle("📧 E-Mail erstellen – Übergabeprotokoll")
+        dlg.setMinimumWidth(660)
+        dlg.setMinimumHeight(680)
+        dlg_layout = QVBoxLayout(dlg)
+        dlg_layout.setSpacing(10)
+        dlg_layout.setContentsMargins(16, 14, 16, 14)
+
+        # Adressfelder
+        addr_form = QFormLayout()
+        addr_form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
+        addr_form.setSpacing(8)
+        an_edit = QLineEdit()
+        an_edit.setPlaceholderText("E-Mail-Adresse(n), kommagetrennt")
+        addr_form.addRow("An:", an_edit)
+        cc_edit = QLineEdit()
+        cc_edit.setPlaceholderText("CC – optional, kommagetrennt")
+        addr_form.addRow("CC:", cc_edit)
+        subj_edit = QLineEdit()
+        subj_edit.setText(betreff)
+        addr_form.addRow("Betreff:", subj_edit)
+        dlg_layout.addLayout(addr_form)
+
+        # ── Fahrzeugschäden-Sektion ───────────────────────────────────────────
+        schaden_frame = QFrame()
+        schaden_frame.setStyleSheet(
+            "QFrame{border:1px solid #e0a060;border-radius:5px;background:#fffdf8;}"
+        )
+        schaden_vl = QVBoxLayout(schaden_frame)
+        schaden_vl.setContentsMargins(10, 8, 10, 8)
+        schaden_vl.setSpacing(4)
+
+        anz_offen = len(offene_schaeden)
+        anz_ges   = len(bereits_gesendet)
+        sch_lbl   = QLabel(
+            f"🔧 Fahrzeugschäden letzte 7 Tage  —  "
+            f"{anz_offen} offen / ungesendet    {anz_ges} bereits gesendet"
+        )
+        sch_lbl.setStyleSheet("font-weight:bold;font-size:11px;border:none;")
+        schaden_vl.addWidget(sch_lbl)
+
+        sch_scroll = _QSA()
+        sch_scroll.setWidgetResizable(True)
+        sch_scroll.setMaximumHeight(130)
+        sch_scroll.setStyleSheet("QScrollArea{border:none;}")
+        sch_inner = QWidget()
+        sch_inner.setStyleSheet("background:transparent;")
+        sch_inner_vl = QVBoxLayout(sch_inner)
+        sch_inner_vl.setContentsMargins(0, 0, 0, 0)
+        sch_inner_vl.setSpacing(2)
+
+        _SCHWERE_ICON = {"gering": "🟡", "mittel": "🟠", "schwer": "🔴"}
+        _schaden_checkboxes: list[tuple[QCheckBox, dict]] = []
+
+        for s in offene_schaeden:
+            icon = _SCHWERE_ICON.get(s.get("schwere", "gering"), "🟡")
+            cb = QCheckBox(
+                f"{icon} {s.get('kennzeichen','?')}  |  {s.get('datum','')}  |  "
+                f"{s.get('beschreibung','')}"
+            )
+            cb.setChecked(True)
+            cb.setStyleSheet("font-size:10px;")
+            sch_inner_vl.addWidget(cb)
+            _schaden_checkboxes.append((cb, s))
+
+        for s in bereits_gesendet:
+            cb = QCheckBox(
+                f"✅ {s.get('kennzeichen','?')}  |  {s.get('datum','')}  |  "
+                f"{s.get('beschreibung','')}  [bereits gesendet]"
+            )
+            cb.setChecked(False)
+            cb.setEnabled(False)
+            cb.setStyleSheet("font-size:10px;color:#aaa;")
+            sch_inner_vl.addWidget(cb)
+
+        if not all_schaeden:
+            no_lbl = QLabel("Keine Schäden in den letzten 7 Tagen erfasst.")
+            no_lbl.setStyleSheet("color:#aaa;font-size:10px;border:none;padding:4px;")
+            sch_inner_vl.addWidget(no_lbl)
+
+        sch_scroll.setWidget(sch_inner)
+        schaden_vl.addWidget(sch_scroll)
+        dlg_layout.addWidget(schaden_frame)
+
+        # E-Mail-Body
+        body_lbl = QLabel("Nachricht:")
+        body_lbl.setStyleSheet("font-weight:bold;")
+        dlg_layout.addWidget(body_lbl)
+        body_edit = QTextEdit()
+        body_edit.setPlainText(body_pre)
+        body_edit.setMinimumHeight(170)
+        dlg_layout.addWidget(body_edit)
+
+        # Anhänge
+        att_lbl = QLabel("Anhänge:")
+        att_lbl.setStyleSheet("font-weight:bold;")
+        dlg_layout.addWidget(att_lbl)
+        att_list = QListWidget()
+        att_list.setMaximumHeight(70)
+        att_list.setStyleSheet(
+            "QListWidget{border:1px solid #ccc;border-radius:3px;font-size:10px;}"
+        )
+        dlg_layout.addWidget(att_list)
+
+        att_row = QHBoxLayout()
+        att_add_btn = QPushButton("➕ Datei hinzufügen")
+        att_add_btn.setFixedHeight(26)
+        att_add_btn.setStyleSheet(
+            "QPushButton{background:#eef4fa;border:1px solid #b0c8e8;"
+            "border-radius:4px;padding:2px 10px;color:#0a6ed1;font-size:11px;}"
+            "QPushButton:hover{background:#d0e4f5;}"
+        )
+        att_remove_btn = QPushButton("✕ Entfernen")
+        att_remove_btn.setFixedHeight(26)
+        att_remove_btn.setStyleSheet(
+            "QPushButton{background:#eee;border:1px solid #ccc;"
+            "border-radius:4px;padding:2px 10px;font-size:11px;}"
+            "QPushButton:hover{background:#ffcccc;color:#a00;}"
+        )
+        att_row.addWidget(att_add_btn)
+        att_row.addWidget(att_remove_btn)
+        att_row.addStretch()
+        dlg_layout.addLayout(att_row)
+
+        def _add_att():
+            paths, _ = QFileDialog.getOpenFileNames(dlg, "Datei(en) auswählen")
+            for p in paths:
+                if p:
+                    att_list.addItem(p)
+
+        def _remove_att():
+            for it in att_list.selectedItems():
+                att_list.takeItem(att_list.row(it))
+
+        att_add_btn.clicked.connect(_add_att)
+        att_remove_btn.clicked.connect(_remove_att)
+
+        # Buttons
+        btn_box = QDialogButtonBox()
+        send_btn   = btn_box.addButton("📧 In Outlook öffnen", QDialogButtonBox.ButtonRole.AcceptRole)
+        cancel_btn = btn_box.addButton("Abbrechen",            QDialogButtonBox.ButtonRole.RejectRole)  # noqa
+        btn_box.rejected.connect(dlg.reject)
+        send_btn.setStyleSheet(
+            "QPushButton{background:#0078a8;color:white;border:none;border-radius:4px;"
+            "padding:6px 18px;font-weight:bold;}"
+            "QPushButton:hover{background:#005f8a;}"
+        )
+        dlg_layout.addWidget(btn_box)
+
+        def _senden():
+            from functions.mail_functions import create_outlook_draft
+
+            checked   = [(cb, s) for cb, s in _schaden_checkboxes if cb.isChecked()]
+            unchecked = [(cb, s) for cb, s in _schaden_checkboxes if not cb.isChecked()]
+
+            # Warnung wenn offene Schäden NICHT mitgesendet werden
+            if unchecked:
+                answer = QMessageBox.warning(
+                    dlg,
+                    "Offene Schäden nicht mitgesendet",
+                    f"Es gibt {len(unchecked)} offene Schäden, die du NICHT in die E-Mail aufnimmst.\n\n"
+                    "Trotzdem senden?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No,
+                )
+                if answer != QMessageBox.StandardButton.Yes:
+                    return
+
+            body_text = body_edit.toPlainText().strip()
+
+            # Ausgewählte Schäden in den Body einbauen
+            if checked:
+                sch_lines = ["", "─" * 38, "🔧 Gemeldete Fahrzeugschäden:", "─" * 38]
+                for _, s in checked:
+                    icon = _SCHWERE_ICON.get(s.get("schwere", "gering"), "🟡")
+                    behoben_txt = " [behoben]" if s.get("behoben") else " [⚠ offen]"
+                    sch_lines.append(
+                        f"  {icon} {s.get('kennzeichen','?')}  |  {s.get('datum','')}  |  "
+                        f"{s.get('beschreibung','')}{behoben_txt}"
+                        + (f"\n       Kommentar: {s['kommentar']}" if s.get("kommentar") else "")
+                    )
+                body_text += "\n" + "\n".join(sch_lines)
+
+            to_val = an_edit.text().strip()
+            cc_val = cc_edit.text().strip()
+            subj   = subj_edit.text().strip()
+            atts   = [att_list.item(i).text() for i in range(att_list.count())]
+            try:
+                create_outlook_draft(
+                    to=to_val,
+                    subject=subj,
+                    body_text=body_text,
+                    cc=cc_val,
+                    attachments=atts if atts else None,
+                )
+                # Als gesendet markieren
+                for _, s in checked:
+                    try:
+                        markiere_schaden_gesendet(s["id"])
+                    except Exception:
+                        pass
+                dlg.accept()
+            except Exception as e:
+                QMessageBox.critical(
+                    dlg, "Fehler",
+                    f"E-Mail konnte nicht erstellt werden:\n{e}\n\n"
+                    "Bitte sicherstellen, dass Outlook geöffnet ist."
+                )
+
+        send_btn.clicked.connect(_senden)
+        dlg.exec()
+
+    # ── Handy-Sektion dynamisch aufbauen ──────────────────────────────────────
+
+    def _rebuild_handy_section(self, protokoll_id):
+        """Baut die Handy-Eintragsliste neu auf."""
+        while self._handy_section_layout.count():
+            item = self._handy_section_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        self._handy_eintraege_widgets.clear()
+
+        eintraege = lade_handy_eintraege(protokoll_id) if protokoll_id else []
+        if eintraege:
+            for e in eintraege:
+                self._add_handy_row(
+                    geraet_nr=e["geraet_nr"] if isinstance(e, dict) else e[0],
+                    notiz=e["notiz"] if isinstance(e, dict) else e[1],
+                    _skip_hint_remove=True
+                )
+        else:
+            hint = QLabel("🤙 Noch keine Geräte eingetragen – ➕ hinzufügen")
+            hint.setStyleSheet("color: #aaa; font-size: 10px; border: none;")
+            self._handy_section_layout.addWidget(hint)
+
+    def _add_handy_row(self, geraet_nr: str = "", notiz: str = "",
+                       _skip_hint_remove: bool = False):
+        """Fügt eine neue Zeile (Geräte-Nr + Notiz) zur Handy-Sektion hinzu."""
+        if not _skip_hint_remove and self._handy_section_layout.count() > 0:
+            first = self._handy_section_layout.itemAt(0)
+            if first and first.widget() and isinstance(first.widget(), QLabel):
+                w = self._handy_section_layout.takeAt(0).widget()
+                w.deleteLater()
+
+        row_frame = QFrame()
+        row_frame.setStyleSheet(
+            "QFrame{background:#fafafa;border:1px solid #e8e8e8;border-radius:4px;}"
+        )
+        row_layout = QHBoxLayout(row_frame)
+        row_layout.setContentsMargins(6, 4, 6, 4)
+        row_layout.setSpacing(6)
+
+        nr_lbl = QLabel("Gerät:")
+        nr_lbl.setStyleSheet("border:none;color:#555;font-size:10px;")
+        nr_lbl.setFixedWidth(40)
+        nr_edit = QLineEdit()
+        nr_edit.setPlaceholderText("z.B. 7 oder Handy-3")
+        nr_edit.setText(str(geraet_nr))
+        nr_edit.setFixedWidth(100)
+        nr_edit.setStyleSheet(
+            "border:1px solid #ccc;border-radius:3px;padding:2px 4px;"
+            "font-size:11px;background:white;"
+        )
+
+        notiz_edit = QLineEdit()
+        notiz_edit.setPlaceholderText("Notiz zu diesem Gerät ...")
+        notiz_edit.setText(str(notiz))
+        notiz_edit.setStyleSheet(
+            "border:1px solid #ccc;border-radius:3px;padding:2px 4px;"
+            "font-size:11px;background:white;"
+        )
+
+        del_btn = QPushButton("✕")
+        del_btn.setFixedSize(22, 22)
+        del_btn.setStyleSheet(
+            "QPushButton{background:#eee;border:none;border-radius:3px;"
+            "color:#a00;font-weight:bold;font-size:11px;}"
+            "QPushButton:hover{background:#ffcccc;}"
+        )
+
+        row_layout.addWidget(nr_lbl)
+        row_layout.addWidget(nr_edit)
+        row_layout.addWidget(notiz_edit, 1)
+        row_layout.addWidget(del_btn)
+
+        entry = (nr_edit, notiz_edit)
+        self._handy_eintraege_widgets.append(entry)
+
+        def _remove():
+            if entry in self._handy_eintraege_widgets:
+                self._handy_eintraege_widgets.remove(entry)
+            row_frame.setParent(None)
+            row_frame.deleteLater()
+            if self._handy_section_layout.count() == 0:
+                hint = QLabel("🤙 Noch keine Geräte eingetragen – ➕ hinzufügen")
+                hint.setStyleSheet("color: #aaa; font-size: 10px; border: none;")
+                self._handy_section_layout.addWidget(hint)
+
+        del_btn.clicked.connect(_remove)
+        self._handy_section_layout.addWidget(row_frame)
 
     # ── Refresh (von main_window aufgerufen) ───────────────────────────────────
 

@@ -18,26 +18,29 @@ from config import (
     APP_NAME, APP_VERSION, BASE_DIR,
     FIORI_SIDEBAR_BG, FIORI_BLUE, FIORI_WHITE, FIORI_LIGHT_BLUE, FIORI_TEXT
 )
-from gui.dashboard     import DashboardWidget
-from gui.aufgaben_tag  import AufgabenTagWidget
-from gui.aufgaben      import AufgabenWidget
-from gui.dienstplan    import DienstplanWidget
-from gui.uebergabe    import UebergabeWidget
-from gui.fahrzeuge    import FahrzeugeWidget
-from gui.einstellungen import EinstellungenWidget
-from gui.code19        import Code19Widget
+from gui.dashboard        import DashboardWidget
+from gui.aufgaben_tag     import AufgabenTagWidget
+from gui.aufgaben         import AufgabenWidget
+from gui.dienstplan       import DienstplanWidget
+from gui.uebergabe        import UebergabeWidget
+from gui.fahrzeuge        import FahrzeugeWidget
+from gui.einstellungen    import EinstellungenWidget
+from gui.code19           import Code19Widget
+from gui.dokument_browser import DokumentBrowserWidget
 
 
 NAV_ITEMS = [
-    ("🏠", "Dashboard",      0),
-    ("☀️", "Aufgaben Tag",   1),
-    ("🌙", "Aufgaben Nacht", 2),
-    ("📅", "Dienstplan",     3),
-    ("📋", "Übergabe",       4),
-    ("🚗", "Fahrzeuge",      5),
-    ("🕐", "Code 19",        6),
-    ("💾", "Backup",         7),
-    ("⚙️",  "Einstellungen", 8),
+    ("🏠", "Dashboard",       0),
+    ("☀️", "Aufgaben Tag",    1),
+    ("🌙", "Aufgaben Nacht",  2),
+    ("📅", "Dienstplan",      3),
+    ("📋", "Übergabe",        4),
+    ("🚗", "Fahrzeuge",       5),
+    ("🕐", "Code 19",         6),
+    ("🖨️", "Ma. Ausdrucke",  7),
+    ("🤒", "Krankmeldungen",  8),
+    ("💾", "Backup",          9),
+    ("⚙️",  "Einstellungen", 10),
 ]
 
 
@@ -170,20 +173,34 @@ class MainWindow(QMainWindow):
         self._stack = QStackedWidget()
 
         # Pages
-        self._dashboard_page     = DashboardWidget()
+        self._dashboard_page      = DashboardWidget()
         self._aufgaben_tag_page  = AufgabenTagWidget()
         self._aufgaben_page      = AufgabenWidget()
         self._dienstplan_page    = DienstplanWidget()
         self._uebergabe_page     = UebergabeWidget()
         self._fahrzeuge_page     = FahrzeugeWidget()
         self._code19_page        = Code19Widget()
+
+        _AUSDRUCKE_PATH    = os.path.join(BASE_DIR, "Daten", "Vordrucke")
+        _KRANKMELD_PATH    = os.path.join(
+            os.path.dirname(os.path.dirname(BASE_DIR)), "03_Krankmeldungen"
+        )
+        self._ausdrucke_page     = DokumentBrowserWidget(
+            "🖨 Ma. Ausdrucke – Vordrucke", _AUSDRUCKE_PATH
+        )
+        self._krankmeldungen_page = DokumentBrowserWidget(
+            "🤒 Krankmeldungen", _KRANKMELD_PATH, allow_subfolders=True
+        )
+
         self._backup_page        = self._placeholder_page("💾 Backup", "Backup-Verwaltung wird implementiert.")
         self._settings_page      = EinstellungenWidget()
 
         for page in [self._dashboard_page, self._aufgaben_tag_page,
                      self._aufgaben_page, self._dienstplan_page,
                      self._uebergabe_page, self._fahrzeuge_page,
-                     self._code19_page, self._backup_page, self._settings_page]:
+                     self._code19_page, self._ausdrucke_page,
+                     self._krankmeldungen_page, self._backup_page,
+                     self._settings_page]:
             self._stack.addWidget(page)
 
         layout.addWidget(self._stack)
@@ -223,3 +240,7 @@ class MainWindow(QMainWindow):
             self._fahrzeuge_page.refresh()
         elif index == 6:
             self._code19_page.refresh()
+        elif index == 7:
+            self._ausdrucke_page.refresh()
+        elif index == 8:
+            self._krankmeldungen_page.refresh()

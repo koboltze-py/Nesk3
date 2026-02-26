@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
     QFrame, QScrollArea, QSplitter, QTextEdit, QLineEdit,
     QComboBox, QFormLayout, QMessageBox, QTabWidget,
     QTableWidget, QTableWidgetItem, QHeaderView, QDateEdit,
-    QDialog, QDialogButtonBox, QCheckBox, QSizePolicy
+    QDialog, QDialogButtonBox, QCheckBox, QSizePolicy, QInputDialog
 )
 from PySide6.QtCore import Qt, QDate
 from PySide6.QtGui import QFont, QColor
@@ -106,11 +106,16 @@ class _FahrzeugDialog(QDialog):
         self._tuev.setCalendarPopup(True)
         self._tuev.setDisplayFormat("dd.MM.yyyy")
         self._tuev.setSpecialValueText("–  kein Datum")
+        self._kein_tuev = QCheckBox("Kein TÜV erforderlich")
         if f and f.get("tuev_datum"):
             qd = QDate.fromString(f["tuev_datum"], "yyyy-MM-dd")
             self._tuev.setDate(qd if qd.isValid() else QDate.currentDate())
         else:
             self._tuev.setDate(QDate.currentDate())
+            if f is not None:
+                self._kein_tuev.setChecked(True)
+                self._tuev.setEnabled(False)
+        self._kein_tuev.toggled.connect(lambda on: self._tuev.setEnabled(not on))
         self._notiz = QTextEdit(f.get("notizen","") if f else "")
         self._notiz.setFixedHeight(70)
 
@@ -123,6 +128,7 @@ class _FahrzeugDialog(QDialog):
         fl.addRow("Kennzeichen *:", self._kz)
         fl.addRow("Typ:",           self._typ)
         fl.addRow("TÜV bis:",       self._tuev)
+        fl.addRow("",               self._kein_tuev)
         fl.addRow("Notizen:",       self._notiz)
 
         layout.addLayout(fl)
@@ -144,7 +150,7 @@ class _FahrzeugDialog(QDialog):
         return dict(
             kennzeichen   = self._kz.text().strip().upper(),
             typ           = self._typ.text().strip(),
-            tuev_datum    = self._tuev.date().toString("yyyy-MM-dd"),
+            tuev_datum    = "" if self._kein_tuev.isChecked() else self._tuev.date().toString("yyyy-MM-dd"),
             notizen       = self._notiz.toPlainText().strip(),
         )
 
@@ -412,6 +418,39 @@ class FahrzeugeWidget(QWidget):
         vlayout.setContentsMargins(0, 0, 0, 0)
         vlayout.setSpacing(0)
 
+        # ── Suchleiste ────────────────────────────────────────────────────────
+        search_bar = QFrame()
+        search_bar.setStyleSheet("background:#f0f2f4; border-bottom:1px solid #ddd;")
+        search_bar.setFixedHeight(86)
+        sl = QVBoxLayout(search_bar)
+        sl.setContentsMargins(8, 6, 8, 6)
+        sl.setSpacing(4)
+
+        self._fz_search = QLineEdit()
+        self._fz_search.setPlaceholderText("🔍 Kennzeichen, Status, Schäden ...")
+        self._fz_search.setStyleSheet(
+            "background:white; border:1px solid #ccc; border-radius:3px;"
+            "padding:4px 8px; font-size:11px;"
+        )
+        self._fz_search.textChanged.connect(self._apply_fahrzeug_filter)
+
+        filter_row = QHBoxLayout()
+        filter_lbl = QLabel("Filter:")
+        filter_lbl.setStyleSheet("border:none; font-size:10px; color:#555;")
+        self._fz_filter_combo = QComboBox()
+        self._fz_filter_combo.addItems(["Alle", "Status", "Schäden", "Termine", "Historie"])
+        self._fz_filter_combo.setStyleSheet(
+            "background:white; border:1px solid #ccc; border-radius:3px;"
+            "padding:2px 4px; font-size:10px;"
+        )
+        self._fz_filter_combo.currentIndexChanged.connect(self._apply_fahrzeug_filter)
+        filter_row.addWidget(filter_lbl)
+        filter_row.addWidget(self._fz_filter_combo, 1)
+
+        sl.addWidget(self._fz_search)
+        sl.addLayout(filter_row)
+        vlayout.addWidget(search_bar)
+
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -440,6 +479,64 @@ class FahrzeugeWidget(QWidget):
             self._liste_layout.insertWidget(self._liste_layout.count() - 1, frame)
             self._liste_items[f["id"]] = (frame, f.get("aktueller_status") or "fahrbereit", bool(f.get("aktiv", 1)))
         self._update_liste_selection()
+        self._apply_fahrzeug_filter()
+
+    def _apply_fahrzeug_filter(self):
+        """Zeigt/versteckt Fahrzeuge anhand des Suchtextes und des gewählten Filters."""
+        text = self._fz_search.text().strip().lower()
+        filter_mode = self._fz_filter_combo.currentText()
+
+        for fid, (frame, status, aktiv) in self._liste_items.items():
+            if not text:
+                frame.setVisible(True)
+                continue
+
+            fz = lade_fahrzeug(fid) or {}
+            kz  = (fz.get("kennzeichen") or "").lower()
+            typ = (fz.get("typ") or "").lower()
+            match_basis = text in kz or text in typ
+
+            if filter_mode == "Status":
+                sm = STATUS_META.get(status, {})
+                match = match_basis or text in (sm.get("label") or "").lower() or text in (status or "").lower()
+
+            elif filter_mode == "Schäden":
+                schaeden = lade_schaeden(fid) or []
+                match = match_basis or any(
+                    text in (s.get("beschreibung") or "").lower() or
+                    text in (s.get("kommentar") or "").lower() or
+                    text in (s.get("schwere") or "").lower()
+                    for s in schaeden
+                )
+
+            elif filter_mode == "Termine":
+                termine = lade_termine(fid) or []
+                match = match_basis or any(
+                    text in (t.get("typ") or "").lower() or
+                    text in (t.get("notiz") or "").lower()
+                    for t in termine
+                )
+
+            elif filter_mode == "Historie":
+                historie = lade_komplette_historie(fid) or []
+                match = match_basis or any(
+                    text in (h.get("status") or "").lower() or
+                    text in (h.get("notiz") or "").lower() or
+                    text in (h.get("datum") or "").lower()
+                    for h in historie
+                )
+
+            else:  # Alle
+                schaeden = lade_schaeden(fid) or []
+                termine  = lade_termine(fid) or []
+                match = (
+                    match_basis
+                    or text in (STATUS_META.get(status, {}).get("label") or "").lower()
+                    or any(text in (s.get("beschreibung") or "").lower() for s in schaeden)
+                    or any(text in (t.get("typ") or "").lower() for t in termine)
+                )
+
+            frame.setVisible(match)
 
     def _make_liste_item(self, f: dict) -> QFrame:
         fid     = f["id"]
@@ -715,12 +812,32 @@ class FahrzeugeWidget(QWidget):
         layout.setContentsMargins(16, 12, 16, 12)
         layout.setSpacing(8)
 
+        btn_row = QHBoxLayout()
+        btn_row.setSpacing(8)
+
         btn_add = QPushButton("＋  Schaden erfassen")
         btn_add.setFixedHeight(36)
         btn_add.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_add.setStyleSheet(_btn_style("#bb0000", "#990000"))
         btn_add.clicked.connect(lambda: self._schaden_erfassen(fid))
-        layout.addWidget(btn_add, 0, Qt.AlignmentFlag.AlignLeft)
+        btn_row.addWidget(btn_add)
+
+        btn_unfall = QPushButton("🗋  Unfallbogen")
+        btn_unfall.setFixedHeight(36)
+        btn_unfall.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_unfall.setStyleSheet(_btn_style("#b05000", "#8a3d00"))
+        btn_unfall.clicked.connect(self._unfallbogen_dialog)
+        btn_row.addWidget(btn_unfall)
+
+        btn_rep = QPushButton("🔧  Reparaturauftrag")
+        btn_rep.setFixedHeight(36)
+        btn_rep.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_rep.setStyleSheet(_btn_style("#1565a8", "#0f4d8a"))
+        btn_rep.clicked.connect(self._reparaturauftrag_oeffnen)
+        btn_row.addWidget(btn_rep)
+
+        btn_row.addStretch()
+        layout.addLayout(btn_row)
 
         table = QTableWidget()
         table.setColumnCount(6)
@@ -978,6 +1095,16 @@ class FahrzeugeWidget(QWidget):
     def _fahrzeug_loeschen(self, fid: int):
         f = lade_fahrzeug(fid)
         kz = f.get("kennzeichen","?") if f else "?"
+        pw, ok = QInputDialog.getText(
+            self, "Löschen bestätigen",
+            "Passwort eingeben:",
+            QLineEdit.EchoMode.Password
+        )
+        if not ok:
+            return
+        if pw != "mettwurst":
+            QMessageBox.warning(self, "Falsches Passwort", "Das eingegebene Passwort ist falsch – Fahrzeug nicht gelöscht.")
+            return
         if QMessageBox.question(
             self, "Fahrzeug löschen",
             f"Fahrzeug {kz} und alle zugehörigen Daten (Schäden, Termine, Status) dauerhaft löschen?",
@@ -1012,6 +1139,104 @@ class FahrzeugeWidget(QWidget):
             d = dlg.get_data()
             erstelle_schaden(fid, d["datum"], d["beschreibung"], d["schwere"], d["kommentar"])
             self._zeige_fahrzeug(fid)
+
+    def _unfallbogen_dialog(self):
+        import os as _os
+        _BASE = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+        folder = _os.path.join(_BASE, "Daten", "Unfallmeldebogen Vorlage")
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle("🗋 Unfallbogen – Vorlagen drucken")
+        dlg.setMinimumWidth(420)
+        dlg_vl = QVBoxLayout(dlg)
+        dlg_vl.setContentsMargins(18, 14, 18, 14)
+        dlg_vl.setSpacing(10)
+
+        title = QLabel("Unfallmeldebogen – Vorlagen")
+        title.setStyleSheet("font-size:14px;font-weight:bold;")
+        dlg_vl.addWidget(title)
+
+        hint = QLabel("Datei öffnen → im PDF-Viewer über Datei › Drucken ausgeben")
+        hint.setStyleSheet("color:#666;font-size:11px;")
+        dlg_vl.addWidget(hint)
+
+        sep = QFrame()
+        sep.setFrameShape(QFrame.Shape.HLine)
+        sep.setStyleSheet("color:#ddd;")
+        dlg_vl.addWidget(sep)
+
+        try:
+            files = sorted([
+                f for f in _os.listdir(folder)
+                if f.lower().endswith((".pdf", ".doc", ".docx", ".xls", ".xlsx"))
+            ])
+        except Exception:
+            files = []
+
+        if not files:
+            dlg_vl.addWidget(QLabel("⚠ Keine Dateien im Ordner gefunden."))
+        else:
+            for fname in files:
+                row = QHBoxLayout()
+                lbl = QLabel(fname)
+                lbl.setStyleSheet("font-size:11px;")
+                lbl.setWordWrap(True)
+                row.addWidget(lbl, 1)
+
+                fpath = _os.path.join(folder, fname)
+
+                btn_open = QPushButton("📄 Öffnen / Drucken")
+                btn_open.setFixedHeight(28)
+                btn_open.setStyleSheet(
+                    "QPushButton{background:#0078a8;color:white;border:none;"
+                    "border-radius:4px;padding:2px 10px;font-size:11px;}"
+                    "QPushButton:hover{background:#005f8a;}"
+                )
+                btn_open.clicked.connect(lambda _checked=False, p=fpath: (
+                    _os.startfile(p) if hasattr(_os, "startfile") else
+                    __import__("subprocess").run(["xdg-open", p])
+                ))
+                row.addWidget(btn_open)
+                dlg_vl.addLayout(row)
+
+        dlg_vl.addStretch()
+
+        btn_folder = QPushButton("📁 Ordner öffnen")
+        btn_folder.setFixedHeight(28)
+        btn_folder.setStyleSheet(
+            "QPushButton{background:#eee;border:1px solid #ccc;"
+            "border-radius:4px;padding:2px 10px;font-size:11px;}"
+            "QPushButton:hover{background:#ddd;}"
+        )
+        btn_folder.clicked.connect(lambda: (
+            __import__("os").startfile(folder)
+            if hasattr(__import__("os"), "startfile") else None
+        ))
+
+        close_btn = QPushButton("Schließen")
+        close_btn.setFixedHeight(28)
+        close_btn.clicked.connect(dlg.accept)
+
+        btn_row_bottom = QHBoxLayout()
+        btn_row_bottom.addWidget(btn_folder)
+        btn_row_bottom.addStretch()
+        btn_row_bottom.addWidget(close_btn)
+        dlg_vl.addLayout(btn_row_bottom)
+
+        dlg.exec()
+
+    def _reparaturauftrag_oeffnen(self):
+        import os as _os
+        _BASE = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+        pdf = _os.path.join(_BASE, "Daten", "Bulmor schaden", "Reparaturauftrag Bulmor Vorlage.pdf")
+        if not _os.path.isfile(pdf):
+            QMessageBox.warning(self, "Datei nicht gefunden",
+                                f"Reparaturauftrag-Vorlage nicht gefunden:\n{pdf}")
+            return
+        try:
+            _os.startfile(pdf)
+        except Exception as e:
+            QMessageBox.critical(self, "Fehler", f"Datei konnte nicht geöffnet werden:\n{e}")
 
     def _termin_erfassen(self, fid: int):
         dlg = _TerminDialog(parent=self)

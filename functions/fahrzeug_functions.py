@@ -212,6 +212,35 @@ def loesche_schaden(schaden_id: int) -> bool:
         return cur.rowcount > 0
 
 
+def markiere_schaden_gesendet(schaden_id: int) -> bool:
+    """Markiert einen Schaden als per E-Mail gesendet."""
+    with db_cursor(commit=True) as cur:
+        cur.execute(
+            "UPDATE fahrzeug_schaeden SET gesendet = 1, geaendert_am = datetime('now','localtime') WHERE id = ?",
+            (schaden_id,)
+        )
+        return cur.rowcount > 0
+
+
+def lade_schaeden_letzte_tage(tage: int = 7) -> list[dict]:
+    """
+    Gibt alle Schäden der letzten N Tage über ALLE Fahrzeuge zurück.
+    Enthält auch Fahrzeug-Kennzeichen.
+    """
+    with db_cursor() as cur:
+        cur.execute("""
+            SELECT fs.id, fs.fahrzeug_id, f.kennzeichen, f.typ AS fahrzeug_typ,
+                   fs.datum, fs.beschreibung, fs.schwere, fs.kommentar,
+                   fs.behoben, fs.behoben_am,
+                   COALESCE(fs.gesendet, 0) AS gesendet
+            FROM fahrzeug_schaeden fs
+            JOIN fahrzeuge f ON f.id = fs.fahrzeug_id
+            WHERE fs.datum >= date('now','localtime', ?)
+            ORDER BY fs.datum DESC, fs.erstellt_am DESC
+        """, (f"-{tage} days",))
+        return cur.fetchall() or []
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  TERMINE
 # ══════════════════════════════════════════════════════════════════════════════

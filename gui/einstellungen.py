@@ -8,7 +8,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QLineEdit, QFrame, QMessageBox, QFileDialog, QGroupBox, QListWidget
+    QLineEdit, QFrame, QMessageBox, QFileDialog, QGroupBox, QListWidget,
+    QComboBox, QInputDialog, QAbstractItemView, QListWidgetItem
 )
 from PySide6.QtGui import QFont
 from PySide6.QtCore import Qt
@@ -308,6 +309,159 @@ class EinstellungenWidget(QWidget):
 
         layout.addWidget(grp_emobby)
 
+        # ── Protokoll-Verwaltung ───────────────────────────────────────
+        grp_proto = QGroupBox("📋 Protokoll-Verwaltung")
+        grp_proto.setStyleSheet(
+            "QGroupBox { font-weight: bold; font-size: 12px; "
+            "border: 2px solid #ddd; border-radius: 6px; margin-top: 10px; padding-top: 8px; }"
+            "QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 4px; }"
+        )
+        grp_proto_layout = QVBoxLayout(grp_proto)
+        grp_proto_layout.setSpacing(8)
+
+        # Filter-Zeile
+        proto_filter_row = QHBoxLayout()
+        self._proto_filter = QComboBox()
+        self._proto_filter.addItems(["Alle Protokolle", "Tagdienst", "Nachtdienst"])
+        self._proto_filter.setFixedWidth(180)
+        proto_load_btn = QPushButton("🔄 Laden")
+        proto_load_btn.setFixedWidth(90)
+        proto_load_btn.clicked.connect(self._load_protokoll_liste)
+        proto_filter_row.addWidget(QLabel("Filter:"))
+        proto_filter_row.addWidget(self._proto_filter)
+        proto_filter_row.addWidget(proto_load_btn)
+        proto_filter_row.addStretch()
+        grp_proto_layout.addLayout(proto_filter_row)
+
+        # List-Widget (Mehrfachauswahl)
+        self._proto_list = QListWidget()
+        self._proto_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self._proto_list.setMinimumHeight(180)
+        self._proto_list.setStyleSheet(
+            "QListWidget { border: 1px solid #ccc; border-radius: 4px; font-size: 11px; }"
+            "QListWidget::item:selected { background: #2980b9; color: white; }"
+        )
+        grp_proto_layout.addWidget(self._proto_list)
+
+        # Aktions-Buttons
+        proto_btn_row = QHBoxLayout()
+        proto_del_btn = QPushButton("🗑 Löschen")
+        proto_del_btn.setFixedHeight(34)
+        proto_del_btn.setStyleSheet(
+            "QPushButton{background:#c0392b;color:white;border-radius:4px;font-weight:bold;}"
+            "QPushButton:hover{background:#e74c3c;}"
+        )
+        proto_del_btn.clicked.connect(self._loeschen_protokolle_bulk)
+        proto_arch_btn = QPushButton("📦 Archivieren")
+        proto_arch_btn.setFixedHeight(34)
+        proto_arch_btn.setStyleSheet(
+            "QPushButton{background:#7f8c8d;color:white;border-radius:4px;font-weight:bold;}"
+            "QPushButton:hover{background:#95a5a6;}"
+        )
+        proto_arch_btn.clicked.connect(self._archivieren_protokolle_bulk)
+        proto_btn_row.addWidget(proto_del_btn)
+        proto_btn_row.addWidget(proto_arch_btn)
+        proto_btn_row.addStretch()
+        grp_proto_layout.addLayout(proto_btn_row)
+
+        hint_lbl = QLabel("ℹ️  Mehrfachauswahl mit Strg/Shift. Aktionen sind passwortgeschützt.")
+        hint_lbl.setStyleSheet("color:#888;font-size:9px;")
+        grp_proto_layout.addWidget(hint_lbl)
+
+        layout.addWidget(grp_proto)
+
+        # ── Archiv-Datenbank ─────────────────────────────────────
+        grp_archiv = QGroupBox("📁 Archiv-Datenbank")
+        grp_archiv.setStyleSheet(
+            "QGroupBox { font-weight: bold; font-size: 12px; "
+            "border: 2px solid #b8c8d8; border-radius: 6px; margin-top: 10px; padding-top: 8px; }"
+            "QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 4px; }"
+        )
+        grp_archiv_layout = QVBoxLayout(grp_archiv)
+        grp_archiv_layout.setSpacing(8)
+
+        # Pfad-Zeile
+        arch_path_row = QHBoxLayout()
+        self._archiv_path_edit = QLineEdit()
+        from config import ARCHIV_DB_PATH as _ARCH_PATH
+        self._archiv_path_edit.setText(_ARCH_PATH)
+        self._archiv_path_edit.setStyleSheet(
+            "border:1px solid #ccc;border-radius:3px;padding:3px 6px;font-size:10px;"
+        )
+        arch_browse_btn = QPushButton("📂 Durchsuchen")
+        arch_browse_btn.setFixedWidth(110)
+        arch_browse_btn.setFixedHeight(28)
+        arch_browse_btn.setStyleSheet(
+            "QPushButton{background:#eef4fa;border:1px solid #b0c8e8;"
+            "border-radius:4px;padding:2px 8px;color:#0a6ed1;font-size:11px;}"
+            "QPushButton:hover{background:#d0e4f5;}"
+        )
+        arch_path_row.addWidget(QLabel("Archiv-Datei:"))
+        arch_path_row.addWidget(self._archiv_path_edit, 1)
+        arch_path_row.addWidget(arch_browse_btn)
+        grp_archiv_layout.addLayout(arch_path_row)
+
+        def _browse_archiv():
+            p, _ = QFileDialog.getSaveFileName(
+                self, "Archiv-Datenbankdatei wählen", self._archiv_path_edit.text(),
+                "SQLite Datenbank (*.db);;Alle Dateien (*)"
+            )
+            if p:
+                self._archiv_path_edit.setText(p)
+        arch_browse_btn.clicked.connect(_browse_archiv)
+
+        # Filter-Zeile
+        archiv_filter_row = QHBoxLayout()
+        self._archiv_filter = QComboBox()
+        self._archiv_filter.addItems(["Alle Protokolle", "Tagdienst", "Nachtdienst"])
+        self._archiv_filter.setFixedWidth(180)
+        arch_load_btn = QPushButton("🔄 Archiv laden")
+        arch_load_btn.setFixedWidth(110)
+        arch_load_btn.clicked.connect(self._load_archiv_liste)
+        archiv_filter_row.addWidget(QLabel("Filter:"))
+        archiv_filter_row.addWidget(self._archiv_filter)
+        archiv_filter_row.addWidget(arch_load_btn)
+        archiv_filter_row.addStretch()
+        grp_archiv_layout.addLayout(archiv_filter_row)
+
+        # Archiv-List-Widget
+        self._archiv_list = QListWidget()
+        self._archiv_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self._archiv_list.setMinimumHeight(160)
+        self._archiv_list.setStyleSheet(
+            "QListWidget { border: 1px solid #b8c8d8; border-radius: 4px; font-size: 11px; }"
+            "QListWidget::item:selected { background: #1a6ea0; color: white; }"
+        )
+        grp_archiv_layout.addWidget(self._archiv_list)
+
+        # Aktions-Buttons
+        archiv_btn_row = QHBoxLayout()
+        arch_detail_btn = QPushButton("🔍 Details")
+        arch_detail_btn.setFixedHeight(34)
+        arch_detail_btn.setStyleSheet(
+            "QPushButton{background:#2980b9;color:white;border-radius:4px;font-weight:bold;}"
+            "QPushButton:hover{background:#3498db;}"
+        )
+        arch_detail_btn.clicked.connect(self._archiv_details_popup)
+        arch_restore_btn = QPushButton("↩ Wiederherstellen")
+        arch_restore_btn.setFixedHeight(34)
+        arch_restore_btn.setStyleSheet(
+            "QPushButton{background:#27ae60;color:white;border-radius:4px;font-weight:bold;}"
+            "QPushButton:hover{background:#2ecc71;}"
+        )
+        arch_restore_btn.clicked.connect(self._wiederherstellen_aus_archiv)
+        archiv_btn_row.addWidget(arch_detail_btn)
+        archiv_btn_row.addWidget(arch_restore_btn)
+        archiv_btn_row.addStretch()
+        grp_archiv_layout.addLayout(archiv_btn_row)
+
+        arch_hint = QLabel("ℹ️  Protokolle, die über ‘Archivieren’ entfernt wurden, landen hier.  Wiederherstellen = zurück in die Hauptdatenbank.")
+        arch_hint.setStyleSheet("color:#888;font-size:9px;")
+        arch_hint.setWordWrap(True)
+        grp_archiv_layout.addWidget(arch_hint)
+
+        layout.addWidget(grp_archiv)
+
         # ── Speichern-Button ───────────────────────────────────────────
         save_btn = QPushButton("💾 Einstellungen speichern")
         save_btn.setMinimumHeight(42)
@@ -474,6 +628,227 @@ class EinstellungenWidget(QWidget):
             self._load_emobby_list()
         except Exception as e:
             QMessageBox.critical(self, "Fehler", f"Fehler beim Entfernen:\n{e}")
+
+    # ------------------------------------------------------------------
+    # Protokoll-Verwaltung
+    # ------------------------------------------------------------------
+
+    def _load_protokoll_liste(self):
+        """Lädt alle Protokolle (inkl. archivierte) in die Verwaltungs-Liste."""
+        from functions.uebergabe_functions import lade_alle_protokolle_verwaltung
+        self._proto_list.clear()
+        filter_text = self._proto_filter.currentText()
+        typ_map = {"Tagdienst": "Tag", "Nachtdienst": "Nacht"}
+        typ_filter = typ_map.get(filter_text)      # None → alle
+        try:
+            protokolle = lade_alle_protokolle_verwaltung(typ_filter)
+            for p in protokolle:
+                pid    = p.get("id", "?")
+                datum  = p.get("datum", "?")
+                stype  = p.get("schicht_typ", "?")
+                erst   = p.get("ersteller", "")
+                status = p.get("status", "")
+                arch   = p.get("archiviert", 0)
+                icon   = "☀" if stype == "Tag" else "🌙"
+                arch_tag = "  [archiviert]" if arch else ""
+                text = f"#{pid}  {datum}  {icon} {stype}  {erst}  [{status}]{arch_tag}"
+                item = QListWidgetItem(text)
+                item.setData(Qt.ItemDataRole.UserRole, pid)
+                self._proto_list.addItem(item)
+        except Exception as e:
+            QMessageBox.critical(self, "Fehler", f"Protokolle konnten nicht geladen werden:\n{e}")
+
+    def _loeschen_protokolle_bulk(self):
+        """Löscht ausgewählte Protokolle nach Passwortprüfung."""
+        selected = self._proto_list.selectedItems()
+        if not selected:
+            QMessageBox.information(self, "Hinweis", "Bitte mindestens ein Protokoll auswählen.")
+            return
+        pw, ok = QInputDialog.getText(
+            self, "Passwort erforderlich",
+            f"Passwort eingeben zum endgültigen Löschen\nvon {len(selected)} Protokoll(en):",
+            QLineEdit.EchoMode.Password
+        )
+        if not ok:
+            return
+        if pw != "mettwurst":
+            QMessageBox.warning(self, "Falsches Passwort", "Das eingegebene Passwort ist falsch.")
+            return
+        ids = [item.data(Qt.ItemDataRole.UserRole) for item in selected]
+        try:
+            from functions.uebergabe_functions import loesche_protokolle_bulk
+            count = loesche_protokolle_bulk(ids)
+            QMessageBox.information(self, "Erledigt", f"✅ {count} Protokoll(e) wurden gelöscht.")
+            self._load_protokoll_liste()
+        except Exception as e:
+            QMessageBox.critical(self, "Fehler", f"Fehler beim Löschen:\n{e}")
+
+    def _archivieren_protokolle_bulk(self):
+        """Exportiert ausgewählte Protokolle in archiv.db und löscht sie aus der Haupt-DB."""
+        selected = self._proto_list.selectedItems()
+        if not selected:
+            QMessageBox.information(self, "Hinweis", "Bitte mindestens ein Protokoll auswählen.")
+            return
+        pw, ok = QInputDialog.getText(
+            self, "Passwort erforderlich",
+            f"Passwort eingeben zum Archivieren\nvon {len(selected)} Protokoll(en):",
+            QLineEdit.EchoMode.Password
+        )
+        if not ok:
+            return
+        if pw != "mettwurst":
+            QMessageBox.warning(self, "Falsches Passwort", "Das eingegebene Passwort ist falsch.")
+            return
+        ids = [item.data(Qt.ItemDataRole.UserRole) for item in selected]
+        archiv_path = getattr(self, "_archiv_path_edit", None)
+        archiv_path = archiv_path.text().strip() if archiv_path else None
+        try:
+            from functions.archiv_functions import exportiere_in_archiv
+            count = exportiere_in_archiv(ids, archiv_path or None)
+            QMessageBox.information(
+                self, "Erledigt",
+                f"📦 {count} Protokoll(e) wurden in die Archiv-Datenbank exportiert"
+                f"\nund aus der Hauptdatenbank entfernt."
+            )
+            self._load_protokoll_liste()
+        except Exception as e:
+            QMessageBox.critical(self, "Fehler", f"Fehler beim Archivieren:\n{e}")
+
+    # ------------------------------------------------------------------
+    # Archiv-Datenbank
+    # ------------------------------------------------------------------
+
+    def _load_archiv_liste(self):
+        """Lädt Protokolle aus der Archiv-Datenbank in die Archiv-Liste."""
+        from functions.archiv_functions import lade_archiv_protokolle
+        self._archiv_list.clear()
+        archiv_path = self._archiv_path_edit.text().strip() or None
+        filter_text = self._archiv_filter.currentText()
+        typ_map = {"Tagdienst": "tagdienst", "Nachtdienst": "nachtdienst"}
+        typ_filter = typ_map.get(filter_text)
+        try:
+            protokolle = lade_archiv_protokolle(archiv_path, typ_filter)
+            if not protokolle:
+                self._archiv_list.addItem("(Keine archivierten Protokolle vorhanden)")
+                return
+            for p in protokolle:
+                pid      = p.get("id", "?")
+                orig_id  = p.get("orig_id", "")
+                datum    = p.get("datum", "?")
+                stype    = p.get("schicht_typ", "?")
+                erst     = p.get("ersteller", "")
+                status   = p.get("status", "")
+                arch_am  = (p.get("archiviert_am") or "")[:10]
+                icon     = "☀" if "tag" in stype else "🌙"
+                label    = "Tagdienst" if "tag" in stype else "Nachtdienst"
+                text = f"[Archiv#{pid}]  {datum}  {icon} {label}  {erst}  [{status}]  archiviert: {arch_am}"
+                item = QListWidgetItem(text)
+                item.setData(Qt.ItemDataRole.UserRole, pid)
+                self._archiv_list.addItem(item)
+        except Exception as e:
+            QMessageBox.critical(self, "Fehler", f"Archiv konnte nicht geladen werden:\n{e}")
+
+    def _archiv_details_popup(self):
+        """Zeigt ein Detail-Popup für das ausgewählte Archiv-Protokoll."""
+        selected = self._archiv_list.selectedItems()
+        if not selected:
+            QMessageBox.information(self, "Hinweis", "Bitte ein Protokoll auswählen.")
+            return
+        item = selected[0]
+        archiv_id = item.data(Qt.ItemDataRole.UserRole)
+        if archiv_id is None:
+            return
+        from functions.archiv_functions import lade_archiv_protokoll_detail
+        archiv_path = self._archiv_path_edit.text().strip() or None
+        try:
+            data = lade_archiv_protokoll_detail(archiv_id, archiv_path)
+        except Exception as e:
+            QMessageBox.critical(self, "Fehler", f"Details konnten nicht geladen werden:\n{e}")
+            return
+
+        p  = data.get("protokoll", {})
+        fz = data.get("fahrzeuge", [])
+        hs = data.get("handys", [])
+
+        stype = p.get("schicht_typ", "?")
+        icon  = "☀ Tagdienst" if "tag" in stype else "🌙 Nachtdienst"
+        lines: list[str] = [
+            f"Archiv-Protokoll #{p.get('id','?')}  (Original-ID: #{p.get('orig_id','?')})",
+            "=" * 50,
+            f"Art:         {icon}",
+            f"Datum:       {p.get('datum','?')}",
+            f"Schicht:     {p.get('beginn_zeit','?')} – {p.get('ende_zeit','?')}",
+            f"Ersteller:   {p.get('ersteller','')}",
+            f"Abzeichner:  {p.get('abzeichner','')}",
+            f"Patienten:   {p.get('patienten_anzahl',0)}",
+            f"Status:      {p.get('status','')}",
+            f"Archiviert:  {(p.get('archiviert_am') or '')[:16]}",
+            "",
+        ]
+        if p.get("ereignisse"):
+            lines += ["Ereignisse / Vorfälle:", p["ereignisse"], ""]
+        if fz:
+            lines.append("Fahrzeug-Notizen:")
+            for f_ in fz:
+                kz = f_.get("fahrzeug_kz") or f"ID {f_.get('fahrzeug_id','?')}"
+                n  = f_.get("notiz", "")
+                lines.append(f"  • {kz}" + (f": {n}" if n else ""))
+            lines.append("")
+        if hs:
+            lines.append("Handys / Geräte:")
+            for h_ in hs:
+                lines.append(f"  • Gerät {h_.get('geraet_nr','')}" + (f": {h_.get('notiz','')}" if h_.get('notiz') else ""))
+            lines.append("")
+        if p.get("uebergabe_notiz"):
+            lines += ["Übergabe-Notiz:", p["uebergabe_notiz"], ""]
+
+        from PySide6.QtWidgets import QDialog, QTextEdit as _QTE, QDialogButtonBox
+        dlg = QDialog(self)
+        dlg.setWindowTitle(f"🔍 Archiv-Protokoll #{archiv_id} – Details")
+        dlg.setMinimumWidth(540)
+        dlg.setMinimumHeight(420)
+        dlg_layout = QVBoxLayout(dlg)
+        te = _QTE()
+        te.setReadOnly(True)
+        te.setPlainText("\n".join(lines))
+        te.setStyleSheet("font-family: Consolas, monospace; font-size: 11px;")
+        dlg_layout.addWidget(te)
+        bb = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        bb.rejected.connect(dlg.reject)
+        dlg_layout.addWidget(bb)
+        dlg.exec()
+
+    def _wiederherstellen_aus_archiv(self):
+        """Wiederherstellen ausgewählter Archiv-Protokolle in die Haupt-DB."""
+        selected = [i for i in self._archiv_list.selectedItems()
+                    if i.data(Qt.ItemDataRole.UserRole) is not None]
+        if not selected:
+            QMessageBox.information(self, "Hinweis", "Bitte mindestens ein Protokoll auswählen.")
+            return
+        pw, ok = QInputDialog.getText(
+            self, "Passwort erforderlich",
+            f"Passwort zum Wiederherstellen von {len(selected)} Protokoll(en):",
+            QLineEdit.EchoMode.Password
+        )
+        if not ok:
+            return
+        if pw != "mettwurst":
+            QMessageBox.warning(self, "Falsches Passwort", "Das eingegebene Passwort ist falsch.")
+            return
+        ids = [i.data(Qt.ItemDataRole.UserRole) for i in selected]
+        archiv_path = self._archiv_path_edit.text().strip() or None
+        try:
+            from functions.archiv_functions import importiere_aus_archiv
+            count = importiere_aus_archiv(ids, archiv_path)
+            QMessageBox.information(
+                self, "Erledigt",
+                f"✅ {count} Protokoll(e) wurden in die Hauptdatenbank zurückgeführt."
+            )
+            self._load_archiv_liste()
+        except Exception as e:
+            QMessageBox.critical(self, "Fehler", f"Fehler beim Wiederherstellen:\n{e}")
+
+    # ------------------------------------------------------------------
 
     def _save(self):
         ordner = self._ordner_edit.text().strip()

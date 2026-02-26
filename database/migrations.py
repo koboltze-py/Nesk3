@@ -137,6 +137,21 @@ CREATE TABLE IF NOT EXISTS fahrzeug_termine (
     erstellt_am     TEXT DEFAULT (datetime('now','localtime')),
     geaendert_am    TEXT DEFAULT (datetime('now','localtime'))
 );
+
+CREATE TABLE IF NOT EXISTS uebergabe_fahrzeug_notizen (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    protokoll_id    INTEGER NOT NULL REFERENCES uebergabe_protokolle(id) ON DELETE CASCADE,
+    fahrzeug_id     INTEGER NOT NULL REFERENCES fahrzeuge(id) ON DELETE CASCADE,
+    notiz           TEXT DEFAULT '',
+    UNIQUE(protokoll_id, fahrzeug_id)
+);
+
+CREATE TABLE IF NOT EXISTS uebergabe_handy_eintraege (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    protokoll_id    INTEGER NOT NULL REFERENCES uebergabe_protokolle(id) ON DELETE CASCADE,
+    geraet_nr       TEXT NOT NULL,
+    notiz           TEXT DEFAULT ''
+);
 """
 
 _default_ordner = (
@@ -182,6 +197,25 @@ def run_migrations():
             "INSERT OR IGNORE INTO settings (schluessel, wert) VALUES (?, ?)",
             ('dienstplan_ordner', _default_ordner)
         )
+
+        # Neue Spalten für uebergabe_protokolle nachrüsten (SQLite ALTER TABLE)
+        for col, defn in [
+            ("handys_anzahl", "INTEGER DEFAULT 0"),
+            ("handys_notiz",  "TEXT DEFAULT ''"),
+            ("archiviert",    "INTEGER DEFAULT 0"),
+        ]:
+            try:
+                cur.execute(
+                    f"ALTER TABLE uebergabe_protokolle ADD COLUMN {col} {defn}"
+                )
+            except Exception:
+                pass  # Spalte existiert bereits
+
+        # gesendet-Flag für Fahrzeugschäden (E-Mail-Tracking)
+        try:
+            cur.execute("ALTER TABLE fahrzeug_schaeden ADD COLUMN gesendet INTEGER DEFAULT 0")
+        except Exception:
+            pass
 
         conn.commit()
         print("[OK] Datenbank bereit.")
