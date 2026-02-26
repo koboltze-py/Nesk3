@@ -270,7 +270,7 @@ class _Code19MailTab(QWidget):
     _TO  = "hildegard.eichler@koeln-bonn-airport.de"
     _CC  = "erste-hilfe-station-flughafen@drk-koeln.de; flughafen@drk-koeln.de"
     _EXCEL_DEFAULT = str(
-        Path(BASE_DIR) / "Daten" / "Code19" / "Code 19.xlsx"
+        Path(BASE_DIR).parent.parent / "00_CODE 19" / "Code 19.xlsx"
     )
 
     def __init__(self, parent: QWidget | None = None):
