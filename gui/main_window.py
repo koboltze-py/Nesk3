@@ -27,6 +27,7 @@ from gui.fahrzeuge        import FahrzeugeWidget
 from gui.einstellungen    import EinstellungenWidget
 from gui.code19           import Code19Widget
 from gui.dokument_browser import DokumentBrowserWidget
+from gui.hilfe_dialog     import HilfeDialog
 
 
 NAV_ITEMS = [
@@ -171,6 +172,29 @@ class MainWindow(QMainWindow):
             layout.addWidget(btn)
 
         layout.addStretch()
+
+        # Hilfe-Button
+        hilfe_btn = QPushButton("❓  Hilfe")
+        hilfe_btn.setMinimumHeight(36)
+        hilfe_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        hilfe_btn.setToolTip("Bedienungsanleitung und Übersicht aller Funktionen öffnen")
+        hilfe_btn.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(255,255,255,0.10);
+                color: #cdd5e0;
+                border: 1px solid rgba(255,255,255,0.18);
+                border-radius: 4px;
+                padding: 6px 12px;
+                text-align: left;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background-color: rgba(255,255,255,0.20);
+                color: white;
+            }
+        """)
+        hilfe_btn.clicked.connect(lambda: HilfeDialog(self).exec())
+        layout.addWidget(hilfe_btn)
 
         # Version unten
         ver_lbl = QLabel(f"v{APP_VERSION}")
