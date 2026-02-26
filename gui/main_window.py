@@ -18,22 +18,24 @@ from config import (
     APP_NAME, APP_VERSION, BASE_DIR,
     FIORI_SIDEBAR_BG, FIORI_BLUE, FIORI_WHITE, FIORI_LIGHT_BLUE, FIORI_TEXT
 )
-from gui.dashboard    import DashboardWidget
-from gui.aufgaben     import AufgabenWidget
-from gui.dienstplan   import DienstplanWidget
+from gui.dashboard     import DashboardWidget
+from gui.aufgaben_tag  import AufgabenTagWidget
+from gui.aufgaben      import AufgabenWidget
+from gui.dienstplan    import DienstplanWidget
 from gui.uebergabe    import UebergabeWidget
 from gui.fahrzeuge    import FahrzeugeWidget
 from gui.einstellungen import EinstellungenWidget
 
 
 NAV_ITEMS = [
-    ("🏠", "Dashboard",    0),
-    ("📋", "!Aufgaben Nacht", 1),
-    ("📅", "Dienstplan",   2),
-    ("📋", "Übergabe",     3),
-    ("🚗", "Fahrzeuge",    4),
-    ("💾", "Backup",       5),
-    ("⚙️",  "Einstellungen", 6),
+    ("🏠", "Dashboard",      0),
+    ("☀️", "Aufgaben Tag",   1),
+    ("🌙", "Aufgaben Nacht", 2),
+    ("📅", "Dienstplan",     3),
+    ("📋", "Übergabe",       4),
+    ("🚗", "Fahrzeuge",      5),
+    ("💾", "Backup",         6),
+    ("⚙️",  "Einstellungen", 7),
 ]
 
 
@@ -166,17 +168,18 @@ class MainWindow(QMainWindow):
         self._stack = QStackedWidget()
 
         # Pages
-        self._dashboard_page  = DashboardWidget()
-        self._aufgaben_page   = AufgabenWidget()
-        self._dienstplan_page = DienstplanWidget()
-        self._uebergabe_page  = UebergabeWidget()
-        self._fahrzeuge_page  = FahrzeugeWidget()
-        self._backup_page     = self._placeholder_page("💾 Backup", "Backup-Verwaltung wird implementiert.")
-        self._settings_page   = EinstellungenWidget()
+        self._dashboard_page     = DashboardWidget()
+        self._aufgaben_tag_page  = AufgabenTagWidget()
+        self._aufgaben_page      = AufgabenWidget()
+        self._dienstplan_page    = DienstplanWidget()
+        self._uebergabe_page     = UebergabeWidget()
+        self._fahrzeuge_page     = FahrzeugeWidget()
+        self._backup_page        = self._placeholder_page("💾 Backup", "Backup-Verwaltung wird implementiert.")
+        self._settings_page      = EinstellungenWidget()
 
-        for page in [self._dashboard_page, self._aufgaben_page,
-                     self._dienstplan_page, self._uebergabe_page,
-                     self._fahrzeuge_page,
+        for page in [self._dashboard_page, self._aufgaben_tag_page,
+                     self._aufgaben_page, self._dienstplan_page,
+                     self._uebergabe_page, self._fahrzeuge_page,
                      self._backup_page, self._settings_page]:
             self._stack.addWidget(page)
 
@@ -206,10 +209,12 @@ class MainWindow(QMainWindow):
         if index == 0:
             self._dashboard_page.refresh()
         elif index == 1:
-            self._aufgaben_page.refresh()
+            self._aufgaben_tag_page.refresh()
         elif index == 2:
-            self._dienstplan_page.reload_tree()
+            self._aufgaben_page.refresh()
         elif index == 3:
-            self._uebergabe_page.refresh()
+            self._dienstplan_page.reload_tree()
         elif index == 4:
+            self._uebergabe_page.refresh()
+        elif index == 5:
             self._fahrzeuge_page.refresh()
