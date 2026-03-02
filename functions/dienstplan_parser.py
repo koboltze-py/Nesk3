@@ -74,9 +74,10 @@ class DienstplanParser:
     # Vollständig ausgeschlossene Personen (Vorname Nachname, lowercase, fix)
     AUSGESCHLOSSENE_VOLLNAMEN: frozenset = frozenset({'lars peters'})
 
-    def __init__(self, excel_path: str, alle_anzeigen: bool = False):
+    def __init__(self, excel_path: str, alle_anzeigen: bool = False, round_dispo: bool = True):
         self.excel_path    = Path(excel_path)
         self.alle_anzeigen = alle_anzeigen  # True = keine Ausschlüsse, für Anzeige
+        self.round_dispo   = round_dispo    # False = Zeiten nie runden (für Roh-Anzeige)
         self.workbook      = None
         self.sheet         = None
         self.column_map    = None
@@ -142,8 +143,9 @@ class DienstplanParser:
                             d = person.get('krank_abgeleiteter_dienst') or ''
                             person['krank_abgeleiteter_dienst'] = _betr_zu_dispo_kuerzel(d)
                             # Anzeigezeiten auf volle Stunde abrunden
-                            person['start_zeit'] = _runde_auf_volle_stunde(person.get('start_zeit'))
-                            person['end_zeit']   = _runde_auf_volle_stunde(person.get('end_zeit'))
+                            if self.round_dispo:
+                                person['start_zeit'] = _runde_auf_volle_stunde(person.get('start_zeit'))
+                                person['end_zeit']   = _runde_auf_volle_stunde(person.get('end_zeit'))
 
                     alle_nachnamen.append(person['nachname'])
                     if person['ist_krank']:
@@ -346,7 +348,7 @@ class DienstplanParser:
                 self.unbekannte_dienste.add(dienst_text)
 
         # Zeiten
-        round_times = dienst_kategorie in self.DISPO_KATEGORIEN if dienst_kategorie else False
+        round_times = (dienst_kategorie in self.DISPO_KATEGORIEN if dienst_kategorie else False) and self.round_dispo
         start_zeit  = None
         end_zeit    = None
 

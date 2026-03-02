@@ -353,12 +353,13 @@ _ALLE_ZEITEN = ['%02d:%02d' % (h, m) for h in range(24) for m in (0, 15, 30, 45)
 class EditDienstDialog(QDialog):
     """Dialog zum Bearbeiten von Dienst, Von- und Bis-Zeit einer Zeile."""
 
-    def __init__(self, person: dict, parent=None):
+    def __init__(self, person: dict, parent=None, hinweis: str = ''):
         super().__init__(parent)
         self.setWindowTitle('Dienst bearbeiten')
         self.setMinimumWidth(340)
         self.result_data: dict | None = None
         self._person = person
+        self._hinweis = hinweis
         self._build_ui()
 
     def _build_ui(self):
@@ -369,6 +370,16 @@ class EditDienstDialog(QDialog):
         name_lbl.setFont(QFont('Arial', 12, QFont.Weight.Bold))
         name_lbl.setStyleSheet(f'color: {FIORI_TEXT};')
         layout.addWidget(name_lbl)
+
+        if self._hinweis:
+            hint_lbl = QLabel(f'ℹ  {self._hinweis}')
+            hint_lbl.setWordWrap(True)
+            hint_lbl.setFont(QFont('Arial', 9))
+            hint_lbl.setStyleSheet(
+                'background:#fff8e1; border:1px solid #f0c040; border-radius:4px;'
+                'color:#7a5000; padding:5px 8px;'
+            )
+            layout.addWidget(hint_lbl)
 
         form = QFormLayout()
         form.setSpacing(10)
@@ -420,6 +431,201 @@ class EditDienstDialog(QDialog):
         bis    = self._bis_cb.currentText().strip()
         self.result_data = {'dienst': dienst, 'von': von, 'bis': bis}
         self.accept()
+
+
+class _DispoZeitenVorschauDialog(QDialog):
+    """
+    Zeigt alle Dispo- und Betreuer-Eintraege des Dienstplans vor dem Export zur
+    Kontrolle an. Zeiten koennen per Doppelklick oder 'Bearbeiten'-Knopf
+    angepasst werden; die Aenderungen fliessen in den Word-Export ein.
+    """
+
+    def __init__(self, parsed_data: dict, parent=None, raw_data: dict | None = None):
+        super().__init__(parent)
+        import copy
+        self.setWindowTitle("Dispo-Zeiten – Vorschau & Bearbeitung")
+        self.setMinimumWidth(720)
+        self.setMinimumHeight(440)
+        self._data = copy.deepcopy(parsed_data)
+        # Originale Excel-Zeiten vor dem Runden sichern (für Vergleichsspalten)
+        # Bevorzugt aus raw_data (Parser ohne Rundung), sonst Fallback auf parsed_data
+        src = raw_data if raw_data else parsed_data
+        self._orig_zeiten: dict[tuple, tuple] = {}
+        for i, p in enumerate(src.get('dispo', [])):
+            self._orig_zeiten[('dispo', i)] = (
+                p.get('start_zeit') or '–', p.get('end_zeit') or '–'
+            )
+        for i, p in enumerate(src.get('betreuer', [])):
+            self._orig_zeiten[('betreuer', i)] = (
+                p.get('start_zeit') or '–', p.get('end_zeit') or '–'
+            )
+        # Dispo-Zeiten vorab auf volle Stunden runden (so wie der Word-Exporter es tut)
+        for p in self._data.get('dispo', []):
+            for key in ('start_zeit', 'end_zeit'):
+                t = p.get(key) or ''
+                if t and ':' in t:
+                    p[key] = f"{int(t.split(':')[0]):02d}:00"
+        self._row_to_person: list[tuple[str, int]] = []
+        self._build_ui()
+
+    # ── UI ──────────────────────────────────────────────────────────────────
+
+    def _build_ui(self):
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(16, 12, 16, 12)
+        layout.setSpacing(10)
+
+        title = QLabel("✏  Dispo-Zeiten prüfen und anpassen")
+        title.setFont(QFont("Arial", 12, QFont.Weight.Bold))
+        title.setStyleSheet(f"color: {FIORI_TEXT};")
+        layout.addWidget(title)
+
+        hint = QLabel(
+            "Doppelklick auf eine Zeile oder «Bearbeiten»-Knopf, um Dienst / Von / Bis "
+            "zu ändern. Geänderte Werte werden im Word-Export übernommen."
+        )
+        hint.setWordWrap(True)
+        hint.setFont(QFont("Arial", 9))
+        hint.setStyleSheet("color: #666;")
+        layout.addWidget(hint)
+
+        self._table = QTableWidget()
+        self._table.setColumnCount(6)
+        self._table.setHorizontalHeaderLabels([
+            "Name (Kategorie)", "Dienst",
+            "Von (Excel)", "Bis (Excel)",
+            "Von (Export)", "Bis (Export)"
+        ])
+        self._table.horizontalHeader().setSectionResizeMode(
+            0, QHeaderView.ResizeMode.Stretch
+        )
+        for col in (1, 2, 3, 4, 5):
+            self._table.horizontalHeader().setSectionResizeMode(
+                col, QHeaderView.ResizeMode.ResizeToContents
+            )
+        self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self._table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._table.setAlternatingRowColors(True)
+        self._table.setStyleSheet(
+            "QTableWidget{border:1px solid #ddd; font-size:12px;}"
+        )
+        self._table.verticalHeader().setVisible(False)
+        self._table.itemDoubleClicked.connect(lambda item: self._edit_row(item.row()))
+        layout.addWidget(self._table, 1)
+
+        self._rebuild_table()
+
+        # ── Buttons ──────────────────────────────────────────────────────────
+        sep = QFrame()
+        sep.setFrameShape(QFrame.Shape.HLine)
+        sep.setStyleSheet("color:#ddd; margin:2px 0;")
+        layout.addWidget(sep)
+
+        btn_row = QHBoxLayout()
+
+        btn_edit = QPushButton("✏  Bearbeiten")
+        btn_edit.setFixedHeight(36)
+        btn_edit.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_edit.setToolTip("Markierte Zeile bearbeiten (Dienst, Von, Bis)")
+        btn_edit.setStyleSheet(
+            f"QPushButton{{background:{FIORI_BLUE};color:white;border:none;"
+            f"border-radius:4px;padding:4px 14px;font-size:12px;}}"
+            f"QPushButton:hover{{background:#0855a9;}}"
+        )
+        btn_edit.clicked.connect(self._edit_selected)
+        btn_row.addWidget(btn_edit)
+        btn_row.addStretch()
+
+        btn_cancel = QPushButton("Abbrechen")
+        btn_cancel.setFixedHeight(36)
+        btn_cancel.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_cancel.clicked.connect(self.reject)
+
+        btn_weiter = QPushButton("Weiter  →")
+        btn_weiter.setFixedHeight(36)
+        btn_weiter.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_weiter.setToolTip("Zeiten übernehmen und zum Export-Dialog weitergehend")
+        btn_weiter.setStyleSheet(
+            "QPushButton{background:#107e3e;color:white;border:none;"
+            "border-radius:4px;padding:4px 18px;font-size:12px;}"
+            "QPushButton:hover{background:#0d6131;}"
+        )
+        btn_weiter.clicked.connect(self.accept)
+
+        btn_row.addWidget(btn_cancel)
+        btn_row.addSpacing(6)
+        btn_row.addWidget(btn_weiter)
+        layout.addLayout(btn_row)
+
+    # ── Tabellenlogik ────────────────────────────────────────────────────────
+
+    def _rebuild_table(self):
+        self._row_to_person.clear()
+        rows: list[tuple[str, int, dict]] = []
+        for kat_key in ('dispo', 'betreuer'):
+            for idx, p in enumerate(self._data.get(kat_key, [])):
+                rows.append((kat_key, idx, p))
+
+        self._table.setRowCount(len(rows))
+        for row, (kat_key, idx, p) in enumerate(rows):
+            self._row_to_person.append((kat_key, idx))
+            kat_lbl = "Dispo" if kat_key == "dispo" else "Betreuer"
+            anzeige = p.get("anzeigename") or p.get("vollname") or "–"
+            name_item = QTableWidgetItem(f"[{kat_lbl}]  {anzeige}")
+            name_item.setForeground(
+                QColor("#0a5ba4") if kat_key == "dispo" else QColor(FIORI_TEXT)
+            )
+            self._table.setItem(row, 0, name_item)
+            self._table.setItem(row, 1, QTableWidgetItem(p.get("dienst_kategorie", "") or "–"))
+
+            orig_von, orig_bis = self._orig_zeiten.get((kat_key, idx), ('–', '–'))
+            exp_von = p.get("start_zeit", "") or "–"
+            exp_bis = p.get("end_zeit", "") or "–"
+
+            self._table.setItem(row, 2, QTableWidgetItem(orig_von))
+            self._table.setItem(row, 3, QTableWidgetItem(orig_bis))
+
+            it_von = QTableWidgetItem(exp_von)
+            it_bis = QTableWidgetItem(exp_bis)
+            # Exportzeit blau hervorheben wenn sie von der Excel-Zeit abweicht
+            if exp_von != orig_von:
+                it_von.setForeground(QColor("#0a6ed1"))
+                it_von.setFont(QFont("Arial", 11, QFont.Weight.Bold))
+            if exp_bis != orig_bis:
+                it_bis.setForeground(QColor("#0a6ed1"))
+                it_bis.setFont(QFont("Arial", 11, QFont.Weight.Bold))
+            self._table.setItem(row, 4, it_von)
+            self._table.setItem(row, 5, it_bis)
+
+    def _edit_selected(self):
+        self._edit_row(self._table.currentRow())
+
+    def _edit_row(self, row: int):
+        if row < 0 or row >= len(self._row_to_person):
+            return
+        kat_key, idx = self._row_to_person[row]
+        person = self._data[kat_key][idx]
+        hinweis = (
+            'Dispo-Zeiten werden im Word-Export auf volle Stunden gerundet '
+            '(z. B. 07:30 → 07:00).'
+            if kat_key == 'dispo' else ''
+        )
+        dlg = EditDienstDialog(person, parent=self, hinweis=hinweis)
+        if dlg.exec() == QDialog.DialogCode.Accepted and dlg.result_data:
+            d = dlg.result_data
+            person["dienst_kategorie"] = d["dienst"]
+            person["start_zeit"] = d["von"]
+            person["end_zeit"] = d["bis"]
+            person["manuell_geaendert"] = True
+            self._rebuild_table()
+            self._table.selectRow(row)
+
+    # ── Ergebnis ─────────────────────────────────────────────────────────────
+
+    @property
+    def modified_data(self) -> dict:
+        """Gibt die (ggf. bearbeiteten) Dienstplan-Daten zurück."""
+        return self._data
 
 
 class _DienstplanPane(QWidget):
@@ -586,8 +792,10 @@ class _DienstplanPane(QWidget):
         layout.addWidget(self._table, 1)
 
         self._row_count_lbl = QLabel('0 Eintraege')
+        self._row_count_lbl.setFont(QFont('Arial', 9))
+        self._row_count_lbl.setWordWrap(True)
         self._row_count_lbl.setStyleSheet('color: #888;')
-        layout.addWidget(self._row_count_lbl, alignment=Qt.AlignmentFlag.AlignRight)
+        layout.addWidget(self._row_count_lbl)
 
     def _on_close_clicked(self):
         """Pane leeren und ausblenden (ausser Pane 0 - wird nur geleert)."""
@@ -1109,6 +1317,20 @@ class DienstplanWidget(QWidget):
         tree_header.setStyleSheet(f"color: {FIORI_TEXT}; padding: 4px 0;")
         tree_layout.addWidget(tree_header)
 
+        self._manuell_btn = QPushButton("📂  Datei öffnen ...")
+        self._manuell_btn.setFixedHeight(28)
+        self._manuell_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._manuell_btn.setToolTip(
+            "Excel-Dienstplan manuell auswählen (ohne Ordner-Konfiguration)"
+        )
+        self._manuell_btn.setStyleSheet(
+            f"QPushButton {{font-size:10px; padding: 2px 8px; border-radius:4px;"
+            f"background:{FIORI_BLUE}; color:white; border:none;}}"
+            f"QPushButton:hover {{background:#0855a9;}}"
+        )
+        self._manuell_btn.clicked.connect(self._manuell_datei_oeffnen)
+        tree_layout.addWidget(self._manuell_btn)
+
         self._tree = QTreeView()
         self._tree.setStyleSheet("""
             QTreeView {
@@ -1208,6 +1430,20 @@ class DienstplanWidget(QWidget):
         if os.path.isfile(path) and path.lower().endswith(('.xlsx', '.xls')):
             self._open_in_next_pane(path)
 
+    def _manuell_datei_oeffnen(self):
+        """Öffnet einen Datei-Dialog und lädt die gewählte Datei in die nächste freie Pane."""
+        try:
+            from functions.settings_functions import get_setting
+            start_dir = get_setting('dienstplan_ordner') or os.path.expanduser('~')
+        except Exception:
+            start_dir = os.path.expanduser('~')
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Dienstplan-Excel öffnen", start_dir,
+            "Excel-Dateien (*.xlsx *.xls)"
+        )
+        if path:
+            self._open_in_next_pane(path)
+
     # ------------------------------------------------------------------
     # Pane-Verwaltung
     # ------------------------------------------------------------------
@@ -1297,7 +1533,24 @@ class DienstplanWidget(QWidget):
             )
             return
 
-        dlg = ExportDialog(parsed_data=pane.parsed_data, parent=self)
+        # ── Schritt 1: Dispo-Zeiten Vorschau / Bearbeitung ──────────────────
+        # Roh-Zeiten aus Excel ohne jede Rundung für die Vergleichsspalten
+        try:
+            from functions.dienstplan_parser import DienstplanParser
+            raw_result = DienstplanParser(
+                pane.excel_path, alle_anzeigen=True, round_dispo=False
+            ).parse()
+            raw_data = raw_result if raw_result.get('success') else None
+        except Exception:
+            raw_data = None
+
+        vorschau = _DispoZeitenVorschauDialog(pane.parsed_data, raw_data=raw_data, parent=self)
+        if vorschau.exec() != QDialog.DialogCode.Accepted:
+            return
+        export_data = vorschau.modified_data
+
+        # ── Schritt 2: Export-Einstellungen (Zeitraum, PAX, Pfad ...) ────────
+        dlg = ExportDialog(parsed_data=export_data, parent=self)
         if dlg.exec() != QDialog.DialogCode.Accepted or not dlg.result:
             return
 
@@ -1305,7 +1558,7 @@ class DienstplanWidget(QWidget):
         try:
             from functions.staerkemeldung_export import StaerkemeldungExport
             exporter = StaerkemeldungExport(
-                dienstplan_data           = pane.parsed_data,
+                dienstplan_data           = export_data,
                 ausgabe_pfad              = params['ausgabe_pfad'],
                 von_datum                 = params['von_datum'],
                 bis_datum                 = params['bis_datum'],

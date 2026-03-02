@@ -179,8 +179,8 @@ class StaerkemeldungExport:
             start = (person.get('start_zeit') or '')[:5]
             end   = (person.get('end_zeit')   or '')[:5]
 
-            # Dispo: Minuten abschneiden (schon durch Parser gerundet, zur Sicherheit nochmals)
-            if ist_dispo:
+            # Dispo: Minuten abschneiden – außer wenn der Nutzer die Zeit manuell angepasst hat
+            if ist_dispo and not person.get('manuell_geaendert'):
                 if start and ':' in start:
                     start = f"{int(start.split(':')[0]):02d}:00"
                 if end and ':' in end:

@@ -146,6 +146,22 @@ def loesche_status_eintrag(eintrag_id: int) -> bool:
         return cur.rowcount > 0
 
 
+def aktualisiere_status_eintrag(
+    eintrag_id: int,
+    status: str,
+    von: str,
+    bis: str = "",
+    grund: str = "",
+) -> bool:
+    with db_cursor(commit=True) as cur:
+        cur.execute("""
+            UPDATE fahrzeug_status
+            SET status = ?, von = ?, bis = ?, grund = ?
+            WHERE id = ?
+        """, (status, von, bis or None, grund, eintrag_id))
+        return cur.rowcount > 0
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  SCHÄDEN
 # ══════════════════════════════════════════════════════════════════════════════

@@ -24,6 +24,7 @@ from functions.fahrzeug_functions import (
     erstelle_fahrzeug, aktualisiere_fahrzeug, loesche_fahrzeug,
     lade_alle_fahrzeuge, lade_fahrzeug,
     setze_fahrzeug_status, lade_status_historie, aktueller_status, loesche_status_eintrag,
+    aktualisiere_status_eintrag,
     erstelle_schaden, aktualisiere_schaden, lade_schaeden,
     markiere_schaden_behoben, loesche_schaden,
     erstelle_termin, aktualisiere_termin, lade_termine,
@@ -191,6 +192,77 @@ class _StatusDialog(QDialog):
         self._grund.setPlaceholderText("Grund / Bemerkung (optional)")
         self._grund.setFixedHeight(70)
         self._grund.setStyleSheet(_field_style())
+
+        fl.addRow("Status:",      self._status)
+        fl.addRow("Gültig von:", self._von)
+        fl.addRow("",             self._unbestimmt)
+        fl.addRow("Gültig bis:", self._bis)
+        fl.addRow("Grund:",      self._grund)
+        layout.addLayout(fl)
+
+        btns = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        btns.accepted.connect(self.accept)
+        btns.rejected.connect(self.reject)
+        layout.addWidget(btns)
+
+    def get_data(self) -> dict:
+        return dict(
+            status = self._status.currentData(),
+            von    = self._von.date().toString("yyyy-MM-dd"),
+            bis    = "" if self._unbestimmt.isChecked() else self._bis.date().toString("yyyy-MM-dd"),
+            grund  = self._grund.toPlainText().strip(),
+        )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  Dialog: Status-Eintrag bearbeiten
+# ══════════════════════════════════════════════════════════════════════════════
+
+class _StatusBearbeitenDialog(QDialog):
+    """Bestehendes Status-Historieneintrag bearbeiten."""
+    def __init__(self, eintrag: dict, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Status-Eintrag bearbeiten")
+        self.setMinimumWidth(380)
+        layout = QVBoxLayout(self)
+        fl = QFormLayout()
+        fl.setSpacing(8)
+
+        self._status = QComboBox()
+        for key, meta in STATUS_META.items():
+            self._status.addItem(meta["label"], key)
+        # Vorauswahl des gespeicherten Status
+        for i in range(self._status.count()):
+            if self._status.itemData(i) == eintrag.get("status", ""):
+                self._status.setCurrentIndex(i)
+                break
+
+        self._von = QDateEdit()
+        self._von.setCalendarPopup(True)
+        self._von.setDisplayFormat("dd.MM.yyyy")
+        von_qdate = QDate.fromString(eintrag.get("von", ""), "yyyy-MM-dd")
+        self._von.setDate(von_qdate if von_qdate.isValid() else QDate.currentDate())
+
+        self._bis = QDateEdit()
+        self._bis.setCalendarPopup(True)
+        self._bis.setDisplayFormat("dd.MM.yyyy")
+        bis_raw = eintrag.get("bis", "") or ""
+        bis_qdate = QDate.fromString(bis_raw, "yyyy-MM-dd")
+        has_bis = bis_qdate.isValid()
+        self._bis.setDate(bis_qdate if has_bis else QDate.currentDate())
+        self._bis.setEnabled(has_bis)
+
+        self._unbestimmt = QCheckBox("Unbestimmt (kein Enddatum)")
+        self._unbestimmt.setChecked(not has_bis)
+        self._unbestimmt.toggled.connect(lambda c: self._bis.setEnabled(not c))
+
+        self._grund = QTextEdit()
+        self._grund.setPlaceholderText("Grund / Bemerkung (optional)")
+        self._grund.setFixedHeight(70)
+        self._grund.setStyleSheet(_field_style())
+        self._grund.setPlainText(eintrag.get("grund", "") or "")
 
         fl.addRow("Status:",      self._status)
         fl.addRow("Gültig von:", self._von)
@@ -702,6 +774,82 @@ class FahrzeugeWidget(QWidget):
 
         layout.addWidget(tabs, 1)
 
+    # ── Zeitfilter-Hilfe ──────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _add_zeitfilter(
+        layout: "QVBoxLayout",
+        data_list: list,
+        date_key: str,
+        table: "QTableWidget",
+    ):
+        """Fügt eine Jahr/Monat-Filterleiste direkt über die Tabelle in *layout* ein."""
+        MONATE = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun",
+                  "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"]
+        years = sorted(
+            {(e.get(date_key) or "")[:4]
+             for e in data_list
+             if len(e.get(date_key) or "") >= 4},
+            reverse=True,
+        )
+
+        bar = QFrame()
+        bar.setStyleSheet(
+            "QFrame{background:#f5f6fa; border:1px solid #e0e4ec; border-radius:4px;}"
+        )
+        bl = QHBoxLayout(bar)
+        bl.setContentsMargins(8, 4, 8, 4)
+        bl.setSpacing(6)
+
+        _lbl_style = "border:none; font-size:11px; color:#444;"
+
+        lbl_j = QLabel("Jahr:")
+        lbl_j.setStyleSheet(_lbl_style)
+        bl.addWidget(lbl_j)
+        jahr_cb = QComboBox()
+        jahr_cb.setToolTip("Einträge nach Jahr filtern")
+        jahr_cb.addItem("Alle")
+        for y in years:
+            if y:
+                jahr_cb.addItem(y)
+        jahr_cb.setStyleSheet(
+            "QComboBox{background:white;border:1px solid #ccc;border-radius:3px;"
+            "padding:2px 6px;font-size:11px;}"
+        )
+        bl.addWidget(jahr_cb)
+
+        bl.addSpacing(12)
+        lbl_m = QLabel("Monat:")
+        lbl_m.setStyleSheet(_lbl_style)
+        bl.addWidget(lbl_m)
+        monat_cb = QComboBox()
+        monat_cb.setToolTip("Einträge nach Monat filtern")
+        monat_cb.addItem("Alle", None)
+        for i, m in enumerate(MONATE, 1):
+            monat_cb.addItem(f"{i:02d} – {m}", i)
+        monat_cb.setStyleSheet(
+            "QComboBox{background:white;border:1px solid #ccc;border-radius:3px;"
+            "padding:2px 6px;font-size:11px;}"
+        )
+        bl.addWidget(monat_cb)
+        bl.addStretch()
+
+        def _apply():
+            j = jahr_cb.currentText()
+            m = monat_cb.currentData()
+            for r, entry in enumerate(data_list):
+                d = (entry.get(date_key) or "")
+                if not d:
+                    table.setRowHidden(r, False)
+                    continue
+                match_j = (j == "Alle") or d.startswith(j)
+                match_m = (m is None) or (len(d) >= 7 and int(d[5:7]) == m)
+                table.setRowHidden(r, not (match_j and match_m))
+
+        jahr_cb.currentIndexChanged.connect(lambda _: _apply())
+        monat_cb.currentIndexChanged.connect(lambda _: _apply())
+        layout.addWidget(bar)
+
     # ── Tab: Stammdaten ────────────────────────────────────────────────────────
 
     def _tab_stammdaten(self, f: dict) -> QWidget:
@@ -795,27 +943,59 @@ class FahrzeugeWidget(QWidget):
             table.setItem(row, 2, QTableWidgetItem(bis_str))
             table.setItem(row, 3, QTableWidgetItem(e.get("grund","") or "–"))
 
+        self._add_zeitfilter(layout, verlauf, "von", table)
         layout.addWidget(table, 1)
 
-        # Eintrag löschen
-        btn_del = QPushButton("Markierten Eintrag löschen")
-        btn_del.setFixedHeight(32)
-        btn_del.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_del.setToolTip("Ausgewählten Status-Historieneintrag aus der Datenbank entfernen")
-        btn_del.setStyleSheet("QPushButton{background:#eee;border:none;border-radius:4px;padding:4px 12px;}"
-                              "QPushButton:hover{background:#ffcccc;color:#a00;}")
+        # Eintrag bearbeiten / löschen
+        def _edit_status():
+            row = table.currentRow()
+            if row < 0 or row >= len(verlauf):
+                return
+            eintrag = verlauf[row]
+            dlg = _StatusBearbeitenDialog(eintrag, self)
+            if dlg.exec() == QDialog.DialogCode.Accepted:
+                d = dlg.get_data()
+                aktualisiere_status_eintrag(
+                    eintrag["id"], d["status"], d["von"], d["bis"], d["grund"]
+                )
+                self._zeige_fahrzeug(fid)
+
         def _del_status():
             row = table.currentRow()
             if row < 0 or row >= len(verlauf):
                 return
             eid = verlauf[row]["id"]
-            if QMessageBox.question(self,"Löschen","Diesen Status-Eintrag löschen?",
+            if QMessageBox.question(self, "Löschen", "Diesen Status-Eintrag löschen?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
             ) == QMessageBox.StandardButton.Yes:
                 loesche_status_eintrag(eid)
                 self._zeige_fahrzeug(fid)
+
+        table.itemDoubleClicked.connect(lambda _item: _edit_status())
+
+        btn_row = QHBoxLayout()
+        btn_row.setSpacing(8)
+
+        btn_edit = QPushButton("✏  Eintrag bearbeiten")
+        btn_edit.setFixedHeight(32)
+        btn_edit.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_edit.setToolTip("Ausgewählten Status-Historieneintrag bearbeiten (auch Doppelklick)")
+        btn_edit.setStyleSheet("QPushButton{background:#eee;border:none;border-radius:4px;padding:4px 12px;}"
+                               "QPushButton:hover{background:#cce5ff;color:#0057b8;}")
+        btn_edit.clicked.connect(_edit_status)
+        btn_row.addWidget(btn_edit)
+
+        btn_del = QPushButton("🗑  Eintrag löschen")
+        btn_del.setFixedHeight(32)
+        btn_del.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_del.setToolTip("Ausgewählten Status-Historieneintrag aus der Datenbank entfernen")
+        btn_del.setStyleSheet("QPushButton{background:#eee;border:none;border-radius:4px;padding:4px 12px;}"
+                              "QPushButton:hover{background:#ffcccc;color:#a00;}")
         btn_del.clicked.connect(_del_status)
-        layout.addWidget(btn_del)
+        btn_row.addWidget(btn_del)
+
+        btn_row.addStretch()
+        layout.addLayout(btn_row)
         return w
 
     # ── Tab: Schäden ───────────────────────────────────────────────────────────
@@ -882,6 +1062,7 @@ class FahrzeugeWidget(QWidget):
             ))
             table.setItem(row, 5, QTableWidgetItem(s.get("kommentar","") or "–"))
 
+        self._add_zeitfilter(layout, schaeden, "datum", table)
         layout.addWidget(table, 1)
 
         btn_row = QHBoxLayout()
@@ -975,6 +1156,7 @@ class FahrzeugeWidget(QWidget):
             table.setItem(row, 4, it_e)
             table.setItem(row, 5, QTableWidgetItem(t.get("kommentar","") or "–"))
 
+        self._add_zeitfilter(layout, termine, "datum", table)
         layout.addWidget(table, 1)
 
         btn_row = QHBoxLayout()
@@ -1082,6 +1264,7 @@ class FahrzeugeWidget(QWidget):
             table.setItem(row, 4, QTableWidgetItem(e.get("beschreibung","") or "–"))
             table.setItem(row, 5, QTableWidgetItem(e.get("kommentar","") or "–"))
 
+        self._add_zeitfilter(layout, eintraege, "datum", table)
         layout.addWidget(table, 1)
         return w
 

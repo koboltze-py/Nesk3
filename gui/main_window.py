@@ -26,8 +26,9 @@ from gui.uebergabe        import UebergabeWidget
 from gui.fahrzeuge        import FahrzeugeWidget
 from gui.einstellungen    import EinstellungenWidget
 from gui.code19           import Code19Widget
-from gui.dokument_browser import DokumentBrowserWidget
-from gui.hilfe_dialog     import HilfeDialog
+from gui.dokument_browser       import DokumentBrowserWidget
+from gui.mitarbeiter_dokumente  import MitarbeiterDokuementeWidget
+from gui.hilfe_dialog           import HilfeDialog
 
 
 NAV_ITEMS = [
@@ -46,6 +47,7 @@ NAV_ITEMS = [
 
 NAV_TOOLTIPS = [
     "Startseite – Statistiken und Übersicht",
+    "Mitarbeiter-Dokumente: Stellungnahmen, Bescheinigungen und Word-Dokumente mit DRK-Vorlage erstellen",
     "Tagdienst-Aufgaben, Checklisten und Code-19-Mail",
     "Nachtdienst-Aufgaben und Code-19-Mail",
     "Dienstplan laden, anzeigen und Hausverwaltung exportieren",
@@ -212,13 +214,14 @@ class MainWindow(QMainWindow):
         self._stack = QStackedWidget()
 
         # Pages
-        self._dashboard_page      = DashboardWidget()
-        self._aufgaben_tag_page  = AufgabenTagWidget()
-        self._aufgaben_page      = AufgabenWidget()
-        self._dienstplan_page    = DienstplanWidget()
-        self._uebergabe_page     = UebergabeWidget()
-        self._fahrzeuge_page     = FahrzeugeWidget()
-        self._code19_page        = Code19Widget()
+        self._dashboard_page         = DashboardWidget()
+        self._mitarbeiter_dok_page   = MitarbeiterDokuementeWidget()
+        self._aufgaben_tag_page      = AufgabenTagWidget()
+        self._aufgaben_page          = AufgabenWidget()
+        self._dienstplan_page        = DienstplanWidget()
+        self._uebergabe_page         = UebergabeWidget()
+        self._fahrzeuge_page         = FahrzeugeWidget()
+        self._code19_page            = Code19Widget()
 
         _AUSDRUCKE_PATH    = os.path.join(BASE_DIR, "Daten", "Vordrucke")
         _KRANKMELD_PATH    = os.path.join(
@@ -234,12 +237,12 @@ class MainWindow(QMainWindow):
         self._backup_page        = self._placeholder_page("💾 Backup", "Backup-Verwaltung wird implementiert.")
         self._settings_page      = EinstellungenWidget()
 
-        for page in [self._dashboard_page, self._aufgaben_tag_page,
-                     self._aufgaben_page, self._dienstplan_page,
-                     self._uebergabe_page, self._fahrzeuge_page,
-                     self._code19_page, self._ausdrucke_page,
-                     self._krankmeldungen_page, self._backup_page,
-                     self._settings_page]:
+        for page in [self._dashboard_page, self._mitarbeiter_dok_page,
+                     self._aufgaben_tag_page, self._aufgaben_page,
+                     self._dienstplan_page, self._uebergabe_page,
+                     self._fahrzeuge_page, self._code19_page,
+                     self._ausdrucke_page, self._krankmeldungen_page,
+                     self._backup_page, self._settings_page]:
             self._stack.addWidget(page)
 
         layout.addWidget(self._stack)
@@ -268,18 +271,20 @@ class MainWindow(QMainWindow):
         if index == 0:
             self._dashboard_page.refresh()
         elif index == 1:
-            self._aufgaben_tag_page.refresh()
+            self._mitarbeiter_dok_page.refresh()
         elif index == 2:
-            self._aufgaben_page.refresh()
+            self._aufgaben_tag_page.refresh()
         elif index == 3:
-            self._dienstplan_page.reload_tree()
+            self._aufgaben_page.refresh()
         elif index == 4:
-            self._uebergabe_page.refresh()
+            self._dienstplan_page.reload_tree()
         elif index == 5:
-            self._fahrzeuge_page.refresh()
+            self._uebergabe_page.refresh()
         elif index == 6:
-            self._code19_page.refresh()
+            self._fahrzeuge_page.refresh()
         elif index == 7:
-            self._ausdrucke_page.refresh()
+            self._code19_page.refresh()
         elif index == 8:
+            self._ausdrucke_page.refresh()
+        elif index == 9:
             self._krankmeldungen_page.refresh()

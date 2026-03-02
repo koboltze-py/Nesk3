@@ -840,7 +840,7 @@ class AufgabenTagWidget(QWidget):
                 background-color: #d0dae4;
             }
         """)
-        tabs.addTab(_FreieMailTab(), "📋 Checklisten")
+        tabs.addTab(_FreieMailTab(), "📋 Checklisten Mail")
         tabs.addTab(_Code19MailTab(), "📋 Code 19 Mail")
         tabs.addTab(_StaerkemeldungTab(), "📄 Stärkemeldung")
         layout.addWidget(tabs)

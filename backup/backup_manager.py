@@ -73,7 +73,7 @@ def _cleanup_old_backups(backup_dir: str):
 _CODE_BACKUP_DIR = os.path.join(BASE_DIR, "Backup Data")
 
 # Ordner/Muster die beim ZIP-Backup NICHT einbezogen werden sollen
-_ZIP_EXCLUDE_DIRS  = {'__pycache__', '.git', 'Backup Data', 'build_tmp', 'Exe'}
+_ZIP_EXCLUDE_DIRS  = {'__pycache__', '.git', 'Backup Data', 'backup', 'build_tmp', 'Exe'}
 _ZIP_EXCLUDE_EXTS  = {'.pyc', '.pyo'}
 
 
