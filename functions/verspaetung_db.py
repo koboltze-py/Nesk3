@@ -7,7 +7,7 @@ from pathlib import Path
 from datetime import datetime
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-_DB_PFAD = BASE_DIR / "Daten" / "Spät" / "verspaetungen.db"
+_DB_PFAD = BASE_DIR / "database SQL" / "verspaetungen.db"
 
 
 def _init_db():

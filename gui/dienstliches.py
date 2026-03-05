@@ -28,8 +28,9 @@ from config import FIORI_BLUE, FIORI_TEXT, BASE_DIR, FIORI_BORDER
 #  Datenbank
 # ──────────────────────────────────────────────────────────────────────────────
 
-_EINSATZ_DB_DIR  = os.path.join(BASE_DIR, "Daten", "Einsatz")
+_EINSATZ_DB_DIR  = os.path.join(BASE_DIR, "database SQL")
 _EINSATZ_DB_PFAD = os.path.join(_EINSATZ_DB_DIR, "einsaetze.db")
+_EINSATZ_PROTO_DIR = os.path.join(BASE_DIR, "Daten", "Einsatz")
 
 _CREATE_SQL = """
 CREATE TABLE IF NOT EXISTS einsaetze (
@@ -187,7 +188,7 @@ def verfuegbare_jahre_einsaetze() -> list[int]:
 #  Excel-Export
 # ──────────────────────────────────────────────────────────────────────────────
 
-_PROTOKOLL_DIR = os.path.join(_EINSATZ_DB_DIR, "Protokolle")
+_PROTOKOLL_DIR = os.path.join(_EINSATZ_PROTO_DIR, "Protokolle")
 
 
 def export_einsaetze_excel(

@@ -5,6 +5,80 @@ Format: `[Datum] Beschreibung – betroffene Dateien`
 
 ---
 
+## 05.03.2026 – v3.1.0
+
+### Datenbank-Konsolidierung: alle DBs in `database SQL/`
+
+Alle 5 SQLite-Datenbanken liegen jetzt im zentralen Ordner `database SQL/`.
+
+| DB-Datei | Vorher | Jetzt |
+|---|---|---|
+| `nesk3.db` | `database SQL/` | `database SQL/` _(unverändert)_ |
+| `archiv.db` | `database SQL/` | `database SQL/` _(unverändert)_ |
+| `stellungnahmen.db` | `Daten/Mitarbeiterdokumente/Datenbank/` | `database SQL/` |
+| `einsaetze.db` | `Daten/Einsatz/` | `database SQL/` |
+| `verspaetungen.db` | `Daten/Spät/` | `database SQL/` |
+
+- **`functions/stellungnahmen_db.py`**: `DB_ORDNER` → `database SQL`
+- **`gui/dienstliches.py`**: `_EINSATZ_DB_DIR` → `database SQL`; `_PROTOKOLL_DIR` (Excel-Exporte) bleibt in `Daten/Einsatz/Protokolle/`
+- **`functions/verspaetung_db.py`**: `_DB_PFAD` → `database SQL/verspaetungen.db`
+- Bestehende DB-Dateien physisch verschoben; Backup in `Backup Data/db_backups/pre_consolidation_<ts>/`
+
+---
+
+## 03.03.2026 – v3.0.0
+
+### Verspätungs-Modul (Unpünktlicher Dienstantritt)
+
+Neue Kategorie **„Verspätung"** in Mitarbeiterdokumente ersetzt „Lob & Anerkennung".
+
+#### Datenbank & Dokumentenerstellung
+- **`functions/mitarbeiter_dokumente_functions.py`**: Kategorie umbenannt
+- **`functions/verspaetung_db.py`** _(neu)_: SQLite-Protokoll (`verspaetungen.db`) mit allen Feldern (Mitarbeiter, Datum, Dienst, Dienstbeginn, Dienstantritt, Verspätung Min., Begründung, Aufgenommen von, Dokument-Pfad)
+- **`functions/verspaetung_functions.py`** _(neu)_: Füllt Word-Vorlage `FO_CGN_27_Unpünktlicher Dienstantritt.docx`, speichert in `Daten/Spät/Protokoll/`
+
+#### GUI – `gui/mitarbeiter_dokumente.py`
+- Neue Klasse `_VerspaetungDialog`: Dienst-Dropdown (T/T10/N/N10), Mitarbeiter, Datum, Auto-Dienstbeginn, QTimeEdit für Antritt, Live-Verspätungsanzeige (rot/grün), Begründung, Aufgenommen von
+- Button „⏰ Verspätung erfassen" (nur bei Kategorie Verspätung sichtbar)
+- Tab „⏰ Verspätungs-Protokoll" mit Filterleiste (Jahr/Monat/Suche), 8-Spalten-Tabelle, CRUD-Aktionen, Öffnen, Bearbeiten, Löschen, Mail-Versand per Outlook-Entwurf
+
+---
+
+### Modul „Dienstliches" – Einsatzprotokoll
+
+Neuer Sidebar-Button **„Dienstliches"** bei Index 2 (alle Folge-Indizes +1).
+
+#### `gui/dienstliches.py` _(neu)_
+- **Tab „🚑 Einsätze"** (`_EinsaetzeTab`): Einsatzprotokoll nach Vorlage FKB
+  - SQLite `einsaetze.db` mit Feldern: Datum, Uhrzeit (Alarmierung), Dauer, Einsatzstichwort, Einsatzort, Einsatznr. DRK, MA 1/2, Angenommen J/N, Grund, Bemerkung
+  - 6 Einsatzstichwörter: Intern 1, Intern 2, Chirurgisch 1, Chirurgisch 2, Sandienst, Pat. Station
+  - Filter: Jahr, Monat, Freitext-Suche
+  - Excel-Export (`openpyxl`) in `Daten/Einsatz/Protokolle/` mit Datumszeitraum-Dialog
+  - E-Mail-Versand (Outlook-Entwurf mit Excel-Anhang)
+- **Tab „📊 Übersicht"** (`_UebersichtTab`): KPI-Kacheln (Gesamt, Angenommen, Abgelehnt, Ø-Dauer), Monatstabelle, Stichwort-Ranking, Mitarbeiter-Tabelle
+
+#### `gui/main_window.py`
+- `DienstlichesWidget` bei Index 2 eingehängt; alle Folgeseiten Index +1
+
+---
+
+### Stellungnahmen-Fixes
+
+- **`gui/mitarbeiter_dokumente.py`**: ON/Offblock-Felder für Passagierbeschwerde nicht mehr angezeigt
+- **`gui/mitarbeiter_dokumente.py`**: Flugnummer ist optional bei Passagierbeschwerde
+- **`gui/mitarbeiter_dokumente.py`**: Hauptübersicht zeigt nun Flugnummer + Erstellungsdatum
+
+---
+
+### HTML-Dienstplan-Ansicht
+
+- **`functions/dienstplan_html_export.py`** _(neu)_: Generiert statische HTML nach `WebNesk/dienstplan_aktuell.html`
+  - Tagdienst, Nachtdienst, Krank/Abwesend als Cards
+  - Dispo/Betreuer-Unterkategorien pro Card
+  - Responsiv, DRK-Farbschema, Live-Zeitstempel (JS)
+
+---
+
 ## 26.02.2026 – v2.9.4
 
 ### Erklär-Boxen und Tooltips in der gesamten App

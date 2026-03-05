@@ -1,8 +1,8 @@
 # Nesk3 – Technische Dokumentation
 
-**Stand:** 26.02.2026  
+**Stand:** 05.03.2026  
 **Anwendung:** Nesk3 – DRK Flughafen Köln  
-**Zweck:** Dienstplan-Verwaltung, Stärkemeldung, Mitarbeiterverwaltung
+**Zweck:** Dienstplan-Verwaltung, Stärkemeldung, Mitarbeiterverwaltung, Einsatzprotokoll, Verspätungs-Meldungen
 
 ---
 
@@ -15,7 +15,8 @@
 5. [Krankmeldungs-Logik](#5-krankmeldungs-logik)
 6. [Dienst-Definitionen](#6-dienst-definitionen)
 7. [Bekannte Sonderfälle](#7-bekannte-sonderfälle)
-8. [Änderungshistorie](#8-änderungshistorie)
+8. [Datenbanken](#8-datenbanken)
+9. [Änderungshistorie](#9-änderungshistorie)
 
 ---
 
@@ -27,9 +28,10 @@ Nesk3/
 ├── config.py                        # Globale Konstanten (Farben, Pfade, DB-Name)
 │
 ├── gui/
-│   ├── main_window.py               # Hauptfenster, Tab-Navigation
+│   ├── main_window.py               # Hauptfenster, Sidebar-Navigation (13 Seiten)
 │   ├── dashboard.py                 # Dashboard (Statistik-Karten, Flugzeug-Animation)
-│   ├── dienstplan.py                # Dienstplan-Tab (Excel-Import, Tabelle, Export)
+│   ├── dienstplan.py                # Dienstplan-Tab (Excel-Import, Tabelle, Export, 4 Panes)
+│   ├── dienstliches.py              # Dienstliches: Einsatzprotokoll + Übersicht [NEU]
 │   ├── aufgaben.py                  # Aufgaben Nacht (4 Tabs inkl. Code-19-Mail)
 │   ├── aufgaben_tag.py              # Aufgaben Tag (Code19Mail, FreieMail, Checklisten)
 │   ├── sonderaufgaben.py            # Sonderaufgaben (Bulmor, E-Mobby, Dienstplan-Abgleich)
@@ -37,19 +39,25 @@ Nesk3/
 │   ├── fahrzeuge.py                 # Fahrzeugverwaltung
 │   ├── code19.py                    # Code-19 (Taschenuhr-Animation, Protokoll)
 │   ├── mitarbeiter.py               # Mitarbeiter-Verwaltung
+│   ├── mitarbeiter_dokumente.py     # Mitarbeiterdokumente + Stellungnahmen + Verspätung
 │   ├── einstellungen.py             # Einstellungen (Pfade, E-Mobby-Fahrerverwaltung)
 │   └── checklisten.py               # Checklisten-Tab
 │
 ├── functions/
 │   ├── dienstplan_parser.py         # Excel-Parser (Kernlogik, Krank-Typen, Dispo-Abschnitt)
 │   ├── dienstplan_functions.py      # DB-Funktionen für Dienstplan
+│   ├── dienstplan_html_export.py    # Statische HTML-Ansicht generieren [NEU]
 │   ├── emobby_functions.py          # E-Mobby-Fahrerliste (TXT↔DB-Sync, Matching)
 │   ├── fahrzeug_functions.py        # DB-Funktionen für Fahrzeuge
 │   ├── mail_functions.py            # Outlook-COM-Integration
+│   ├── mitarbeiter_dokumente_functions.py  # Kategorien, Dokumenten-Funktionen
 │   ├── mitarbeiter_functions.py     # DB-Funktionen für Mitarbeiter
 │   ├── settings_functions.py        # Key-Value-Einstellungen (get/set)
 │   ├── staerkemeldung_export.py     # Word-Export Stärkemeldung
-│   └── uebergabe_functions.py       # DB-Funktionen für Übergabe-Protokolle
+│   ├── stellungnahmen_db.py         # SQLite-Protokoll für Stellungnahmen
+│   ├── uebergabe_functions.py       # DB-Funktionen für Übergabe-Protokolle
+│   ├── verspaetung_db.py            # SQLite-Protokoll für Verspätungs-Meldungen [NEU]
+│   └── verspaetung_functions.py     # Word-Vorlage FO_CGN_27 ausfüllen/speichern [NEU]
 │
 ├── database/
 │   ├── connection.py                # SQLite-Verbindung
@@ -67,8 +75,16 @@ Nesk3/
 │   ├── FUNKTIONEN.md                # Vollständige Funktionsübersicht aller Module
 │   └── REPRODUKTION.md              # Schritt-für-Schritt Neuerstellung
 │
+├── database SQL/
+│   ├── nesk3.db                     # Hauptdatenbank (WAL-Modus)
+│   ├── archiv.db                    # Archivierte Protokolle
+│   ├── stellungnahmen.db            # Passagierbeschwerde-Stellungnahmen
+│   ├── einsaetze.db                 # Einsatzprotokoll FKB
+│   └── verspaetungen.db             # Verspätungs-Meldungen
+│
 └── Backup Data/
-    └── Nesk3_backup_YYYYMMDD_HHMMSS.zip   # Vollständige ZIP-Backups
+    ├── Nesk3_backup_YYYYMMDD_HHMMSS.zip   # Vollständige ZIP-Backups
+    └── db_backups/                  # SQLite-Snapshots (automatisch + vor Migrationen)
 ```
 
 ---
@@ -427,7 +443,25 @@ CareMan exportiert Disponenten-Zeiten mit minimalen Abweichungen (z.B. `07:15` s
 
 ---
 
-## 8. Änderungshistorie
+## 8. Datenbanken
+
+Alle SQLite-Datenbanken liegen seit **05.03.2026** zentral im Ordner `database SQL/`.
+
+| Datei | Beschreibung | WAL | Zugriff über |
+|---|---|---|---|
+| `nesk3.db` | Hauptdatenbank (Dienstplan, Mitarbeiter, Fahrzeuge, Übergabe, …) | ✅ | `database/connection.py` |
+| `archiv.db` | Archivierte Übergabe-Protokolle | ❌ | `config.py → ARCHIV_DB_PATH` |
+| `stellungnahmen.db` | Passagierbeschwerde-Stellungnahmen | ❌ | `functions/stellungnahmen_db.py` |
+| `einsaetze.db` | Einsatzprotokoll FKB (Dienstliches) | ❌ | `gui/dienstliches.py` |
+| `verspaetungen.db` | Verspätungs-Meldungen (Unpünktlicher Dienstantritt) | ❌ | `functions/verspaetung_db.py` |
+
+**Hinweis zu OneDrive/Netzwerkbetrieb:** SQLite ist nicht für echten Mehrbenutzer-Schreibzugriff über Netzlaufwerke geeignet. WAL-Modus (`nesk3.db`) verbessert die Lese-Parallelität, schützt aber nicht vor Schreibkonflikten bei gleichzeitigem Zugriff von mehreren PCs. Für Nur-Lese-Zugriffe (Anzeige) ist OneDrive-Sync ausreichend.
+
+**Backup:** `main.py` erstellt beim Start automatisch einen Snapshot von `nesk3.db` in `Backup Data/db_backups/`. Für alle 5 DBs liegen manuelle Snapshots unter `Backup Data/db_backups/pre_consolidation_<ts>/`.
+
+---
+
+## 9. Änderungshistorie
 
 ### 25.02.2026 – Session
 

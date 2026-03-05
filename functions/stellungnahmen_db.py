@@ -10,7 +10,7 @@ from contextlib import contextmanager
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-DB_ORDNER = os.path.join(BASE_DIR, "Daten", "Mitarbeiterdokumente", "Datenbank")
+DB_ORDNER = os.path.join(BASE_DIR, "database SQL")
 DB_PFAD   = os.path.join(DB_ORDNER, "stellungnahmen.db")
 
 _CREATE_SQL = """
